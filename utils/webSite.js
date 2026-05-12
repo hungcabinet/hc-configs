@@ -15,6 +15,7 @@ const linkTypePriority = [
     'telegram',
     'subscription',
     'config',
+    'routing',
     'link',
     'outbound',
     'inbound'
