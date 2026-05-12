@@ -1,11 +1,8 @@
-﻿import merge from "deepmerge";
+﻿import files from "./files.js";
+import path from "path";
+import config from "./config.js";
 
 let context = {
-    dirs:{}
-}
-
-function getContextSafe() {
-    return merge({}, context);
 }
 
 function withCommon(props, values, callback) {
@@ -23,8 +20,8 @@ function withCommon(props, values, callback) {
     }
 }
 
-function withUserData(user, server, dirs, callback) {
-    withCommon(["user", "server", "dirs"], [user, server, dirs], callback);
+function withUserData(user, server, callback) {
+    withCommon(["user", "server"], [user, server], callback);
 }
 
 function withProtocol(protocol, callback) {
@@ -43,24 +40,28 @@ function getServer(){
     return context.server;
 }
 
+function getDir(platform){
+    return path.join(files.getUserDestinationPath(config.getCommonConfig(), getUser(), getServer()), platform);
+}
+
 function getCommonDir(){
-    return context.dirs?.commonDir;
+    return getDir("common");
 }
 
 function getWinDir(){
-    return context.dirs?.winDir;
+    return getDir("windows");
 }
 
 function getAndroidDir(){
-    return context.dirs?.androidDir;
+    return getDir("android");
 }
 
 function getIosDir(){
-    return context.dirs?.iosDir;
+    return getDir("ios");
 }
 
 function getRawDir(){
-    return context.dirs?.rawDir;
+    return getDir("raw");
 }
 
 function getProtocol(){
@@ -79,7 +80,6 @@ export default {
     withUserData,
     withProtocol,
     withPlatform,
-    getContextSafe,
     getUser,
     getServer,
     getCommonDir,

@@ -211,6 +211,15 @@ async function renderUserIndex(user){
     });
 
     for (const platform of data.platforms) {
+
+        let commonServerIdx = platform.servers.findIndex(value => value.id === "common");
+
+        if (commonServerIdx >= 0){
+            let commonServer = platform.servers[commonServerIdx];
+            platform.servers.splice(commonServerIdx, 1);
+            platform.servers.unshift(commonServer);
+        }
+
         for (const server of platform.servers) {
             server.links.sort((a, b) => {
                 const aPriority = linkTypePriorityMap.get(a.linkType) ?? Infinity;

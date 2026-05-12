@@ -10,6 +10,7 @@ import webServer from "./utils/webSite.js";
 import context from "./utils/context.js";
 import throne from "./utils/throne.js";
 import telegram from "./utils/telegram.js";
+import contextUtil from "./utils/context.js";
 
 async function mainProcess(){
     webServer.startCollectData();
@@ -17,27 +18,19 @@ async function mainProcess(){
     let commonConfig = configUtil.getCommonConfig();
     let userFilesData = files.getUserFiles(commonConfig)
 
+    let users = [...new Set(userFilesData.map(data => data.userName))];
+
+    for (const user of users) {
+        context.withUserData(user, "common", () => {
+            files.prepareContextDirs();
+        });
+    }
+
     for(let i = 0; i < userFilesData.length; i++) {
         let data = userFilesData[i];
 
-        let commonDir = path.join(data.dstDir, "common");
-        let winDir = path.join(data.dstDir, "windows");
-        let androidDir = path.join(data.dstDir, "android");
-        let iosDir = path.join(data.dstDir, "ios");
-        let rawDir = path.join(data.dstDir, "raw");
-
-        files.prepareDir(commonDir);
-        files.prepareDir(winDir);
-        files.prepareDir(androidDir);
-        files.prepareDir(iosDir);
-        files.prepareDir(rawDir);
-
-        context.withUserData(data.userName, data.srvName, { commonDir, winDir, androidDir, iosDir, rawDir }, () => {
-
-            context.withPlatform("android", ()=>{
-                let androidTelegramLink = telegram.generateSocksLink();
-                webServer.addSpecificLink(androidTelegramLink, "[TELEGRAM] Локальный socks5 прокси", "telegram")
-            });
+        context.withUserData(data.userName, data.srvName, () => {
+            files.prepareContextDirs();
 
             for(let i = 0; i < data.files.length; i++) {
                 let file = data.files[i];
@@ -55,22 +48,19 @@ async function mainProcess(){
         });
     }
 
-    let users = [...new Set(userFilesData.map(data => data.userName))];
-
     for (const user of users) {
         let commonServerDest = files.getUserDestinationPath(commonConfig, user, "common");
 
-        let commonDir = path.join(commonServerDest, "common");
-        let winDir = path.join(commonServerDest, "windows");
-        let androidDir = path.join(commonServerDest, "android");
-        let iosDir = path.join(commonServerDest, "ios");
-        let rawDir = path.join(commonServerDest, "raw");
+        context.withUserData(user, "common", () => {
 
-        context.withUserData(user, "common", { commonDir, winDir, androidDir, iosDir, rawDir }, () => {
+            context.withPlatform("android", ()=>{
+                let androidTelegramLink = telegram.generateSocksLink();
+                webServer.addSpecificLink(androidTelegramLink, "[TELEGRAM] Локальный socks5 прокси", "telegram")
+            });
+
             let windowsRules = throne.extractWindowsRoutes();
 
             context.withPlatform("windows", ()=>{
-                files.prepareDir(path.join(commonServerDest, "windows"));
 
                 let directRulesPath = path.join(commonServerDest, "windows", "direct-rules.txt");
                 let proxyRulesPath = path.join(commonServerDest, "windows", "proxy-rules.txt");

@@ -105,6 +105,14 @@ function prepareDir(dirPath){
     }
 }
 
+function prepareContextDirs(){
+    prepareDir(contextUtil.getCommonDir());
+    prepareDir(contextUtil.getWinDir());
+    prepareDir(contextUtil.getAndroidDir());
+    prepareDir(contextUtil.getIosDir());
+    prepareDir(contextUtil.getRawDir());
+}
+
 function saveJsonObject(jObject, targetDir, type){
     let filePath = path.join(targetDir, `${getFileName(`${contextUtil.getProtocol()}-${type}`)}.json`);
     fs.writeFileSync(filePath, JSON.stringify(jObject, null, 2));
@@ -112,4 +120,4 @@ function saveJsonObject(jObject, targetDir, type){
     return filePath;
 }
 
-export default { getUserFiles, getFileName, prepareDir, saveJsonObject, getRelativeDestinationFilePath, getUserSourcePath, getUserDestinationPath };
+export default { getUserFiles, getFileName, prepareContextDirs, prepareDir, saveJsonObject, getRelativeDestinationFilePath,  getUserDestinationPath };

@@ -7,6 +7,7 @@ import webSite from "./webSite.js";
 import android from "./android.js";
 import config from "./config.js";
 import throne from "./throne.js";
+import context from "./context.js";
 
 function toEndpoint(configString, tag = 'proxy', domainResolver = 'google') {
     const warnings = [];
@@ -439,9 +440,16 @@ function generateUserData(userFileData){
             fs.appendFileSync(awgConfFile, `\n\n[Socks5]\nBindAddress = ${socksIp}:${socksPort}`);
             webSite.addUserFileLink(awgConfFile, `[${contextUtil.getProtocolUpper()}] конфиг для Throne extra core`, "config", ["download", "copy-data"]);
 
+            contextUtil.withUserData(contextUtil.getUser(), "common", () => {
+                winDir = contextUtil.getWinDir();
+            });
+
             let configContent = fs.readFileSync(awgConfFile, "utf-8");
             let subscriptionFilePath = throne.addAmneziaSubscription(winDir, configContent, socksIp, socksPort);
-            webSite.addUserFileLink(subscriptionFilePath, `[${contextUtil.getProtocolUpper()}] подписка для Throne`, "subscription", ["copy-link"]);
+
+            contextUtil.withUserData(contextUtil.getUser(), "common", () => {
+                webSite.addUserFileLink(subscriptionFilePath, `Подписка для Throne`, "subscription", ["copy-link"]);
+            });
         });
     });
 }

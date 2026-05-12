@@ -217,12 +217,20 @@ function generateUserData(userFileData){
             let serverName = config.getVpnServerConfig(server).name || server;
 
             let fixedVlessLink = fixVlessLink(vlessLink, serverName);
-            let subscriptionFilePath = throne.addVlessSubscription(winDir, fixedVlessLink);
-            webSite.addUserFileLink(subscriptionFilePath, `[${contextUtil.getProtocolUpper()}] подписка для Throne`, "subscription", ["copy-link"]);
 
             let linkFilePath = path.join(winDir, `${files.getFileName()}.link`);
             fs.writeFileSync(linkFilePath, fixedVlessLink);
             webSite.addUserFileLink(linkFilePath, `[${contextUtil.getProtocolUpper()}] ссылка для Throne`, "link", ["download", "copy-data"]);
+
+            contextUtil.withUserData(contextUtil.getUser(), "common", () => {
+                winDir = contextUtil.getWinDir();
+            });
+
+            let subscriptionFilePath = throne.addVlessSubscription(winDir, fixedVlessLink);
+
+            contextUtil.withUserData(contextUtil.getUser(), "common", () => {
+                webSite.addUserFileLink(subscriptionFilePath, `Подписка для Throne`, "subscription", ["copy-link"]);
+            });
         });
     });
 }
