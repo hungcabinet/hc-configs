@@ -1,0 +1,46 @@
+﻿{
+  "files": {
+    "sourceDirectoryPath": "./data/src",
+    "destinationDirectoryPath": "./data/dst",
+    "socks": {
+      "ip": "127.0.0.2",
+      "port": 8080,
+      "user": "user",
+      "password": "password"
+    }
+  },
+  "vpnServers": {
+    "default": {},
+    "servers": {
+      "timeweb-msk": {
+        "name": "Timeweb MSK->NL"
+      },
+      "ufo-msk": {
+        "name": "UFO MSK->NL"
+      },
+      "common": {
+        "name": "Общие данные"
+      }
+    }
+  },
+  "rsync": {
+    "enabled" : true,
+    "host": "host-ip-or-domain",
+    "destination": "/var/www/html/config-site/",
+    "user": "user-for-rsync"
+  },
+  "webServer": {
+    "enabled": true,
+    "baseUrl": "https://my.awesome.site",
+    "users": [
+      {
+        "userName": "user1",
+        "password": "pass1"
+      },
+      {
+        "userName": "user2",
+        "password": "pass2"
+      }
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "type": "tun",
+  "tag": "tun-in",
+  "interface_name": "ensp-eth0",
+  "address": [
+    "172.38.0.1/30"
+  ],
+  "stack": "gvisor",
+  "auto_route": true,
+  "route_exclude_address": [
+    "192.168.1.0/24",
+    "10.0.0.0/8",
+    "172.18.0.0/16"
+  ]
+}

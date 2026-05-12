@@ -1,0 +1,12 @@
+{
+  "type": "socks",
+  "tag": "socks-in",
+  "listen": "127.19.0.5",
+  "listen_port": 5080,
+  "users": [
+    {
+      "username": "user",
+      "password": "passwd"
+    }
+  ]
+}

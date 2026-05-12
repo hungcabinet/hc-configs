@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+    <link rel="stylesheet" href="{{ baseUrl }}/site/site.css"/>
+
+    <title>Hungarian Cabinet</title>
+
+</head>
+<body>
+
+<div class="topbar">
+    <h1>Полезные ссылки</h1>
+
+    <button class="theme-btn" onclick="toggleTheme()">
+        <i class="fa-solid fa-sun sun dark-theme"></i>
+        <i class="fa-solid fa-moon moon light-theme"></i>
+    </button>
+</div>
+
+
+{% for platform in user.platforms %}
+<div class="platform">
+    <h2>{{platform.name}}</h2>
+
+    {% for server in platform.servers %}
+    <div class="server">
+        <h3>{{server.name}}</h3>
+
+        <div class="links">
+            {% for link in server.links %}
+            <div class="link{% if loop.index is odd %} odd{% endif %}">
+                {% if link.linkType == 'telegram' %}<i class="fa-brands fa-telegram"></i>
+                {% elseif link.linkType == 'outbound' %}<i class="fa-solid fa-arrow-right-from-bracket"></i>
+                {% elseif link.linkType == 'inbound' %}<i class="fa-solid fa-arrow-right-to-bracket"></i>
+                {% elseif link.linkType == 'config' %}<i class="fa-solid fa-gear"></i>
+                {% elseif link.linkType == 'link' %}<i class="fa-regular fa-file-code"></i>
+                {% elseif link.linkType == 'subscription' %}<i class="fa-solid fa-square-rss"></i>
+                {% elseif link.linkType == 'routing' %}<i class="fa-solid fa-arrow-right-arrow-left"></i>
+                {% else %}<i class="fa-solid fa-link"></i>
+                {% endif %}
+                <div>
+                    {{link.text}}
+                    {% for attribute in link.attributes %}
+                    {% if attribute == 'download' %}<a href="{{ link.href }}" download>[Скачать]</a>
+                    {% elseif attribute == 'copy-data' %}<a class="copy-content" data-link="{{ link.download }}" href="javascript:void(0)">[Копировать данные]</a>
+                    {% elseif attribute == 'copy-link' %}<a class="copy-link" data-link="{{ link.href }}" href="javascript:void(0)">[Копировать ссылку]</a>
+                    {% else %}<a href="{{ link.href }}">[Открыть]</a>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endfor %}
+
+<script src="{{ baseUrl }}/site/site.js"></script>
+
+</body>
+</html>

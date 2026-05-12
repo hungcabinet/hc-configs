@@ -1,0 +1,186 @@
+﻿:root {
+    --bg: #f4f4f5;
+    --card: #ffffff;
+    --card-alt: #b5b5b8;
+    --text: #18181b;
+    --muted: #71717a;
+    --border: #e4e4e7;
+    --link: #143683;
+}
+
+body.dark {
+    --bg: #09090b;
+    --card: #18181b;
+    --card-alt: #292930;
+    --text: #fafafa;
+    --muted: #a1a1aa;
+    --border: #27272a;
+    --link: #7ab7ff;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    -webkit-text-size-adjust: 100%;
+}
+
+body {
+    margin: 0;
+    padding: 32px;
+    font-family: Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 8px;
+}
+
+.theme-btn {
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    padding: 10px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: 0.2s ease;
+    flex-shrink: 0;
+}
+
+.theme-btn .light-theme {
+    display: inline-block;
+}
+
+.theme-btn .dark-theme {
+    display: none;
+}
+
+.dark .theme-btn .light-theme {
+    display: none;
+}
+
+.dark .theme-btn .dark-theme {
+    display: inline-block;
+}
+
+.theme-btn:hover {
+    opacity: 0.9;
+}
+
+.platform {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.platform h2 {
+    margin-top: 0;
+    margin-bottom: 18px;
+    font-size: 22px;
+    word-break: break-word;
+}
+
+.server {
+    border: 2px solid var(--border);
+    margin-bottom: 18px;
+    min-width: 0;
+}
+
+.server:last-child {
+    margin-bottom: 0;
+}
+
+.server h3 {
+    padding: 10px 0 10px 18px;
+    margin: 0;
+    font-size: 16px;
+    color: var(--text);
+    word-break: break-word;
+}
+
+.links {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    padding-left: 30px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+}
+
+.link.odd{
+    background-color: var(--border);
+}
+
+a {
+    color: var(--link);
+    text-decoration: none;
+    width: fit-content;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+    body {
+        padding: 16px;
+    }
+
+    .platform {
+        padding: 16px;
+        border-radius: 14px;
+    }
+
+    .platform h2 {
+        font-size: 20px;
+        margin-bottom: 16px;
+    }
+
+    .server h3 {
+        padding-left: 14px;
+        font-size: 15px;
+    }
+
+    .link {
+        padding-left: 22px;
+    }
+}
+
+/* Small phones */
+@media (max-width: 480px) {
+    body {
+        padding: 12px;
+    }
+
+    .platform {
+        padding: 14px;
+    }
+
+    .platform h2 {
+        font-size: 18px;
+    }
+
+    .theme-btn {
+        padding: 12px;
+    }
+}

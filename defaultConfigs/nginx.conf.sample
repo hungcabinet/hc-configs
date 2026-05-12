@@ -1,0 +1,46 @@
+﻿server {
+    listen 443 ssl http2;
+    server_name my.awesome.site;
+
+    ssl_certificate /etc/letsencrypt/live/my.awesome.site/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/my.awesome.site/privkey.pem;
+
+
+    auth_basic "Files Access";
+    auth_basic_user_file /etc/nginx/.htpasswd;
+
+
+    root /var/www/html/config-site/;
+
+    location /site/ {
+        auth_basic off;
+
+        expires 1h;
+        add_header Cache-Control "public";
+
+        types {
+            application/javascript js;
+            text/css css;
+        }
+
+        default_type text/plain;
+    }
+
+    location / {
+
+        alias /var/www/html/config-site/users/$remote_user/;
+
+        index index.html;
+        autoindex on;
+        autoindex_localtime on;
+
+        types {
+            application/json json;
+            text/html html htm;
+            text/plain txt link log;
+        }
+
+        default_type text/plain;
+        add_header Cache-Control "no-cache";
+    }
+}
