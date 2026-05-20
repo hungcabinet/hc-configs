@@ -78,7 +78,7 @@ function toOutbound(vlessLink, defaultFingerPrint = "chrome", tag = 'proxy', dom
         }
 
         // Fingerprint
-        const validFingerprints = ['chrome', 'firefox', 'edge', 'safari', 'ios', 'android'];
+        const validFingerprints = ['chrome', 'firefox', 'edge', 'safari'];
         if (!validFingerprints.includes(fp)) {
             fp = defaultFingerPrint || "chrome";
         }
@@ -173,12 +173,12 @@ function generateUserData(userFileData){
             let rawDir = contextUtil.getRawDir();
 
             let outboundFilePath = files.saveJsonObject(data.outbound, rawDir, "outbound");
-            webSite.addUserFileLink(outboundFilePath, `[${contextUtil.getProtocolUpper()}] outbound для кастомных конфигов hc-box или sing-box`, "outbound", ["download", "copy-data"]);
+            webSite.addUserFileLink(outboundFilePath, `[${contextUtil.getProtocol()}] outbound для кастомных конфигов hc-box или sing-box`, "outbound", ["download", "copy-data"]);
 
             let linkFilePath = path.join(rawDir, `${files.getFileName()}.link`);
             let fixedVlessLink = fixVlessLink(vlessLink, serverName);
             fs.writeFileSync(linkFilePath, fixedVlessLink);
-            webSite.addUserFileLink(linkFilePath, `[${contextUtil.getProtocolUpper()}] ссылка для xray клиентов`, "link", ["download", "copy-data"]);
+            webSite.addUserFileLink(linkFilePath, `[${contextUtil.getProtocol()}] ссылка для xray клиентов`, "link", ["download", "copy-data"]);
         });
 
 
@@ -206,8 +206,8 @@ function generateUserData(userFileData){
             iosConfig.outbounds.push(outbound);
             iosConfig.inbounds.push(tunInbound);
             let filePath = files.saveJsonObject(iosConfig, contextUtil.getIosDir(), "tun");
-            let link = webSite.addUserFileLink(filePath, `[${contextUtil.getProtocolUpper()}] конфиг для sing-box`, "config", ["download", "copy-data"]);
-            webSite.addSpecificLink(singBox.getSubscriptionLink(link, "tun"), `[${contextUtil.getProtocolUpper()}] подписка для sing-box`, "subscription");
+            let link = webSite.addUserFileLink(filePath, `[${contextUtil.getProtocol()}] конфиг для sing-box`, "config", ["download", "copy-data"]);
+            webSite.addSpecificLink(singBox.getSubscriptionLink(link, "tun"), `[${contextUtil.getProtocol()}] подписка для sing-box`, "subscription");
         });
 
         contextUtil.withPlatform("windows", () => {
@@ -220,13 +220,13 @@ function generateUserData(userFileData){
 
             let linkFilePath = path.join(winDir, `${files.getFileName()}.link`);
             fs.writeFileSync(linkFilePath, fixedVlessLink);
-            webSite.addUserFileLink(linkFilePath, `[${contextUtil.getProtocolUpper()}] ссылка для Throne`, "link", ["download", "copy-data"]);
+            webSite.addUserFileLink(linkFilePath, `[${contextUtil.getProtocol()}] ссылка для Throne`, "link", ["download", "copy-data"]);
 
             contextUtil.withUserData(contextUtil.getUser(), "common", () => {
                 winDir = contextUtil.getWinDir();
             });
 
-            let subscriptionFilePath = throne.addVlessSubscription(winDir, fixedVlessLink);
+            let subscriptionFilePath = throne.addLinkToSubscription(winDir, fixedVlessLink);
 
             contextUtil.withUserData(contextUtil.getUser(), "common", () => {
                 webSite.addUserFileLink(subscriptionFilePath, `Подписка для Throne`, "subscription", ["copy-link"]);
@@ -247,7 +247,7 @@ function fixVlessLink(vlessLink, customName = undefined){
         params.set('fp', "safari");
     }
     else{
-        const validFingerprints = ['chrome', 'firefox', 'edge', 'safari', "android", "ios"];
+        const validFingerprints = ['chrome', 'firefox', 'edge', 'safari'];
 
         if (!validFingerprints.includes(fp)) {
             fp = validFingerprints[Math.floor(Math.random() * validFingerprints.length)];

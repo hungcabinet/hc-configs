@@ -10,7 +10,7 @@ import webServer from "./utils/webSite.js";
 import context from "./utils/context.js";
 import throne from "./utils/throne.js";
 import telegram from "./utils/telegram.js";
-import contextUtil from "./utils/context.js";
+import naiveproxy from "./utils/naiveproxy.js";
 
 async function mainProcess(){
     webServer.startCollectData();
@@ -43,6 +43,8 @@ async function mainProcess(){
 
                 } else if (/^telegram.*\.link$/i.test(file.name)) {
                     telegram.generateUserData(file);
+                } else if (/^naiveproxy.*\.json$/i.test(file.name)){
+                    naiveproxy.generateUserData(file);
                 }
             }
         });

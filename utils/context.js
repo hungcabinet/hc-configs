@@ -68,10 +68,6 @@ function getProtocol(){
     return context.protocol || "common";
 }
 
-function getProtocolUpper(){
-    return getProtocol().toUpperCase();
-}
-
 function getPlatform(){
     return context.platform || "unknown";
 }
@@ -88,6 +84,5 @@ export default {
     getIosDir,
     getRawDir,
     getProtocol,
-    getProtocolUpper,
     getPlatform
 };

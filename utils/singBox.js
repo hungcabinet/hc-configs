@@ -10,7 +10,7 @@ const tunInboundTemplate = configUtil.getConfigContent("tunInboundTemplate.json"
 function getSocksInbound(){
     let inbound = JSON.parse(socksInboundTemplate);
 
-    let socks = configUtil.getCommonConfig().socks;
+    let socks = configUtil.getSocksConfig();
 
     if (socks === undefined) {
         return inbound;

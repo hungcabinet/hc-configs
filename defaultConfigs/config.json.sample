@@ -1,19 +1,26 @@
 ﻿{
   "files": {
     "sourceDirectoryPath": "./data/src",
-    "destinationDirectoryPath": "./data/dst",
-    "socks": {
-      "ip": "127.0.0.2",
-      "port": 8080,
-      "user": "user",
-      "password": "password"
-    }
+    "destinationDirectoryPath": "./data/dst"
+  },
+  "socks": {
+    "ip": "127.0.0.2",
+    "port": 8080,
+    "user": "user",
+    "password": "password"
   },
   "vpnServers": {
-    "default": {},
+    "default": {
+      "naiveproxy": {
+        "useQuic": false
+      }
+    },
     "servers": {
       "timeweb-msk": {
-        "name": "Timeweb MSK->NL"
+        "name": "Timeweb MSK->NL",
+        "naiveproxy": {
+          "useQuic": true
+        }
       },
       "ufo-msk": {
         "name": "UFO MSK->NL"
@@ -24,7 +31,7 @@
     }
   },
   "rsync": {
-    "enabled" : true,
+    "enabled": true,
     "host": "host-ip-or-domain",
     "destination": "/var/www/html/config-site/",
     "user": "user-for-rsync"

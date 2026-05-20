@@ -7,7 +7,6 @@ import webSite from "./webSite.js";
 import android from "./android.js";
 import config from "./config.js";
 import throne from "./throne.js";
-import context from "./context.js";
 
 function toEndpoint(configString, tag = 'proxy', domainResolver = 'google') {
     const warnings = [];
@@ -403,11 +402,11 @@ function generateUserData(userFileData){
             let rawDir = contextUtil.getRawDir();
 
             let outboundFilePath = files.saveJsonObject(data.endpoint, rawDir, "outbound");
-            webSite.addUserFileLink(outboundFilePath, `[${contextUtil.getProtocolUpper()}] endpoint для кастомных конфигов hc-box`, "outbound", ["download", "copy-data"]);
+            webSite.addUserFileLink(outboundFilePath, `[${contextUtil.getProtocol()}] endpoint для кастомных конфигов hc-box`, "outbound", ["download", "copy-data"]);
 
             let filePath = path.join(rawDir, `${files.getFileName()}.conf`);
             fs.copyFileSync(userFileData.path, filePath);
-            webSite.addUserFileLink(filePath, `[${contextUtil.getProtocolUpper()}] конфиг для AmneziaVPN или AmneziaWG`, "config", ["download", "copy-data"]);
+            webSite.addUserFileLink(filePath, `[${contextUtil.getProtocol()}] конфиг для AmneziaVPN или AmneziaWG`, "config", ["download", "copy-data"]);
         });
 
         contextUtil.withPlatform("android", () => {
@@ -423,7 +422,7 @@ function generateUserData(userFileData){
             let filePath = path.join(iosDir, `${files.getFileName("awg")}.conf`)
 
             fs.copyFileSync(userFileData.path, filePath);
-            webSite.addUserFileLink(filePath, `[${contextUtil.getProtocolUpper()}] конфиг для AmneziaVPN или AmneziaWG`, "config", ["download", "copy-data"]);
+            webSite.addUserFileLink(filePath, `[${contextUtil.getProtocol()}] конфиг для AmneziaVPN или AmneziaWG`, "config", ["download", "copy-data"]);
         });
 
         contextUtil.withPlatform("windows", () => {
@@ -432,13 +431,13 @@ function generateUserData(userFileData){
             let awgConfFile =  path.join(winDir, `${files.getFileName("awg")}.conf`);
 
             fs.copyFileSync(userFileData.path, awgConfFile);
-            let socks = config.getCommonConfig().socks;
+            let socks = config.getSocksConfig();
 
             let socksIp = socks.ip || "127.0.0.1";
             let socksPort = socks.port || 1080;
 
             fs.appendFileSync(awgConfFile, `\n\n[Socks5]\nBindAddress = ${socksIp}:${socksPort}`);
-            webSite.addUserFileLink(awgConfFile, `[${contextUtil.getProtocolUpper()}] конфиг для Throne extra core`, "config", ["download", "copy-data"]);
+            webSite.addUserFileLink(awgConfFile, `[${contextUtil.getProtocol()}] конфиг для Throne extra core`, "config", ["download", "copy-data"]);
 
             contextUtil.withUserData(contextUtil.getUser(), "common", () => {
                 winDir = contextUtil.getWinDir();

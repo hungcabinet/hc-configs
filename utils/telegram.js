@@ -9,7 +9,7 @@ import webSite from "./webSite.js";
 function generateSocksLink(){
     let socksInbound = singBox.getSocksInbound();
     let config = configUtil.getVpnServerConfig(contextUtil.getServer())
-    let socks = configUtil.getCommonConfig().socks;
+    let socks = configUtil.getSocksConfig();
 
     let ip = socks?.ip || socksInbound.listen;
     let port = socks?.port || socksInbound.listen_port;
@@ -38,7 +38,7 @@ function generateUserData(userFileData){
             let linkFilePath = path.join(contextUtil.getCommonDir(), `${files.getFileName()}.link`);
 
             fs.copyFileSync(userFileData.path, linkFilePath);
-            webSite.addSpecificLink(link, `[${contextUtil.getProtocolUpper()}] Telegram proxy`, "telegram");
+            webSite.addSpecificLink(link, `[${contextUtil.getProtocol()}] Telegram proxy`, "telegram");
         });
     });
 }

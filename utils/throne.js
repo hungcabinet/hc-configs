@@ -104,7 +104,7 @@ function extractWindowsRoutes(){
     }
 }
 
-function addToSubscription(targetDir, data){
+function addLinkToSubscription(targetDir, data){
     let filePath = path.join(targetDir, "subscriptions.txt");
 
     if (!fs.existsSync(filePath)){
@@ -115,10 +115,6 @@ function addToSubscription(targetDir, data){
     }
 
     return filePath;
-}
-
-function addVlessSubscription(targetDir, vlessLink){
-    return addToSubscription(targetDir, vlessLink);
 }
 
 function addAmneziaSubscription(targetDir, amneziaConfig, ip, port){
@@ -135,7 +131,7 @@ function addAmneziaSubscription(targetDir, amneziaConfig, ip, port){
         extra_core_args: "-c %s",
         extra_core_conf: cleanConfig,
         extra_core_path: "../custom-cores/awg-proxy/wireproxy.exe",
-        name: `${serverName} [AWG]`,
+        name: `${serverName} [awg]`,
         no_logs: false,
         socks_address: ip,
         socks_port: port,
@@ -146,6 +142,6 @@ function addAmneziaSubscription(targetDir, amneziaConfig, ip, port){
     let base64 = base64url(jsonString);
     let link = `json://throne#${base64}`;
 
-    return addToSubscription(targetDir, link);
+    return addLinkToSubscription(targetDir, link);
 }
-export default { extractWindowsRoutes, addVlessSubscription, addAmneziaSubscription };
+export default { extractWindowsRoutes, addLinkToSubscription, addAmneziaSubscription };

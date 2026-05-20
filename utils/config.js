@@ -19,7 +19,10 @@ function getConfigContent(fileRelativePath){
 const data = JSON.parse(getConfigContent("config.json"));
 
 function getVpnServerConfig(serverName){
-    let defaultConf = data.vpnServers?.default || {};
+    let defaultConf = data.vpnServers?.default || {
+        naiveproxy:{
+            useQuic: false
+        }};
     let server = data.vpnServers?.servers === undefined ? {} : (data.vpnServers?.servers[serverName] || {});
 
     return merge(defaultConf, server);
@@ -28,14 +31,21 @@ function getVpnServerConfig(serverName){
 function getCommonConfig(){
     let result = {
         sourceDirectoryPath: "./data/src",
-        destinationDirectoryPath: "./data/dst",
-        socks: {
-            ip: '127.0.0.1',
-            port: '1080'
-        }
+        destinationDirectoryPath: "./data/dst"
     }
 
     let configData = data.files || {};
+
+    return merge(result, configData);
+}
+
+function getSocksConfig(){
+    let result = {
+        ip: '127.0.0.1',
+        port: '1080'
+    }
+
+    let configData = data.socks || {};
 
     return merge(result, configData);
 }
@@ -60,4 +70,4 @@ function getWebServerConfig(){
     return merge(result, configData);
 }
 
-export default { getVpnServerConfig, getCommonConfig, getRsyncConfig, getWebServerConfig, getConfigPath, getConfigContent };
+export default { getVpnServerConfig, getCommonConfig, getRsyncConfig, getWebServerConfig, getConfigPath, getConfigContent, getSocksConfig};

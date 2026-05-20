@@ -2,7 +2,7 @@
 import path from 'path';
 import config from './config.js';
 import contextUtil from "./context.js";
-import configUtil from "./config.js";
+import naiveproxy from "./naiveproxy.js";
 
 function getRelativeDestinationFilePath(filePath, userName = undefined) {
     let fullPath = path.resolve(filePath);
@@ -27,6 +27,17 @@ function getUserFiles(config) {
 
     const result = [];
 
+    function pushResult(data){
+        let existingData = result.find(value => value.srvName === data.srvName && value.userName === data.userName);
+
+        if (existingData !== undefined) {
+            existingData.files = [...existingData.files, ...data.files];
+            return;
+        }
+
+        result.push(data);
+    }
+
     const srvDirs = fs.readdirSync(config.sourceDirectoryPath, { withFileTypes: true });
 
     for (const srvDir of srvDirs) {
@@ -39,48 +50,72 @@ function getUserFiles(config) {
 
         const userDirs = fs.readdirSync(srvPath, { withFileTypes: true });
 
-        for (const userDir of userDirs) {
+        for (const entity of userDirs) {
 
-            if (!userDir.isDirectory()) continue;
+            if (!entity.isDirectory()){
+                if (/^naiveproxy.*\.json$/i.test(entity.name)){
 
-            const userName = userDir.name;
+                    const fullPath = path.join(entity.path, entity.name);
+                    const ext = path.extname(entity.name).toLowerCase();
 
-            const srcDir = getUserSourcePath(config, userName, srvName);
-            const dstDir = getUserDestinationPath(config, userName, srvName);
+                    let users = naiveproxy.getUsers(fullPath);
 
-            // создаём dst директорию
-            fs.mkdirSync(dstDir, { recursive: true });
+                    for (const userName of users) {
+                        const srcDir = getUserSourcePath(config, userName, srvName);
+                        const dstDir = getUserDestinationPath(config, userName, srvName);
 
-            const entries = fs.readdirSync(srcDir, { withFileTypes: true });
+                        fs.mkdirSync(dstDir, { recursive: true });
 
-            const files = [];
-
-            for (const entry of entries) {
-
-                if (!entry.isFile()) continue;
-
-                const ext = path.extname(entry.name).toLowerCase();
-
-                if (ext !== '.conf' && ext !== '.link') continue;
-
-                const fullPath = path.join(srcDir, entry.name);
-
-                files.push({
-                    name: entry.name,
-                    path: fullPath,
-                    ext: ext
-                });
-
+                        pushResult({
+                            srvName: srvName,
+                            userName: userName,
+                            srcDir: srcDir,
+                            dstDir: dstDir,
+                            files: [{
+                                name: entity.name,
+                                path: fullPath,
+                                ext: ext
+                            }]
+                        });
+                    }
+                }
             }
+            else{
+                const userName = entity.name;
 
-            result.push({
-                srvName: srvName,
-                userName: userName,
-                srcDir: srcDir,
-                dstDir: dstDir,
-                files: files
-            });
+                const srcDir = getUserSourcePath(config, userName, srvName);
+                const dstDir = getUserDestinationPath(config, userName, srvName);
 
+                fs.mkdirSync(dstDir, { recursive: true });
+
+                const entries = fs.readdirSync(srcDir, { withFileTypes: true });
+
+                const files = [];
+
+                for (const entry of entries) {
+
+                    if (!entry.isFile()) continue;
+
+                    const ext = path.extname(entry.name).toLowerCase();
+
+                    const fullPath = path.join(srcDir, entry.name);
+
+                    files.push({
+                        name: entry.name,
+                        path: fullPath,
+                        ext: ext
+                    });
+
+                }
+
+                pushResult({
+                    srvName: srvName,
+                    userName: userName,
+                    srcDir: srcDir,
+                    dstDir: dstDir,
+                    files: files
+                });
+            }
         }
     }
 
