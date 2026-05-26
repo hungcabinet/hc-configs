@@ -78,7 +78,7 @@ function toOutbound(vlessLink, defaultFingerPrint = "chrome", tag = 'proxy', dom
         }
 
         // Fingerprint
-        const validFingerprints = ['chrome', 'firefox', 'edge', 'safari'];
+        const validFingerprints = ['chrome', 'firefox', 'edge'];
         if (!validFingerprints.includes(fp)) {
             fp = defaultFingerPrint || "chrome";
         }
@@ -247,7 +247,7 @@ function fixVlessLink(vlessLink, customName = undefined){
         params.set('fp', "safari");
     }
     else{
-        const validFingerprints = ['chrome', 'firefox', 'edge', 'safari'];
+        const validFingerprints = ['chrome', 'firefox', 'edge'];
 
         if (!validFingerprints.includes(fp)) {
             fp = validFingerprints[Math.floor(Math.random() * validFingerprints.length)];

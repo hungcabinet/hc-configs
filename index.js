@@ -78,6 +78,8 @@ async function mainProcess(){
         await webServer.renderUserIndex(user);
     }
 
+    webServer.writeWebFiles();
+
     await syncGeneratedData(commonConfig);
 }
 

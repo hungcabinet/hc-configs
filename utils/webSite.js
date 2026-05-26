@@ -191,15 +191,6 @@ async function renderUserIndex(user){
     let commonConfig = configUtil.getCommonConfig();
 
     let htmlPath = path.join(commonConfig.destinationDirectoryPath, "users", user, "index.html");
-    let siteDstPath = path.join(commonConfig.destinationDirectoryPath, "site");
-
-    let cssSourcePath = configUtil.getConfigPath("site/site.css");
-    let jsSourcePath = configUtil.getConfigPath("site/site.js");
-
-    let cssPath = path.join(siteDstPath, "site.css");
-    let jsPath = path.join(siteDstPath, "site.js");
-
-    files.prepareDir(siteDstPath);
 
     let data = getUserData(user);
 
@@ -240,8 +231,29 @@ async function renderUserIndex(user){
     });
 
     fs.writeFileSync(htmlPath, html);
-    fs.copyFileSync(cssSourcePath, cssPath);
-    fs.copyFileSync(jsSourcePath, jsPath);
 }
 
-export default { startCollectData, addUserFileLink, addUserSimpleLink, renderUserIndex, addSpecificLink};
+function writeWebFiles(){
+    let commonConfig = configUtil.getCommonConfig();
+
+    let siteDstPath = path.join(commonConfig.destinationDirectoryPath, "site");
+    let docsDstPath = path.join(commonConfig.destinationDirectoryPath, "docs");
+
+    files.prepareDir(siteDstPath);
+    files.prepareDir(docsDstPath);
+
+    let cssSourcePath = configUtil.getConfigPath("site/site.css");
+    let jsSourcePath = configUtil.getConfigPath("site/site.js");
+
+    let usersManualSourcePath = configUtil.getConfigPath("docs/for-users.pdf");
+
+    let cssPath = path.join(siteDstPath, "site.css");
+    let jsPath = path.join(siteDstPath, "site.js");
+    let usersManualPath = path.join(docsDstPath, "for-users.pdf");
+
+    fs.copyFileSync(cssSourcePath, cssPath);
+    fs.copyFileSync(jsSourcePath, jsPath);
+    fs.copyFileSync(usersManualSourcePath, usersManualPath);
+}
+
+export default { startCollectData, addUserFileLink, renderUserIndex, addSpecificLink, writeWebFiles};

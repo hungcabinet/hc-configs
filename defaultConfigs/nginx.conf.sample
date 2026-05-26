@@ -26,6 +26,14 @@
         default_type text/plain;
     }
 
+    location /docs/ {
+        types {
+            application/pdf pdf;
+        }
+
+        default_type text/plain;
+    }
+
     location / {
 
         alias /var/www/html/config-site/users/$remote_user/;
