@@ -140,6 +140,15 @@ a:hover {
     text-decoration: underline;
 }
 
+div.spacer {
+    flex: 1;
+}
+
+div.updated-at {
+    padding-right: 16px;
+    padding-left: 16px;
+}
+
 /* Mobile */
 @media (max-width: 768px) {
     body {
@@ -164,23 +173,9 @@ a:hover {
     .link {
         padding-left: 22px;
     }
-}
 
-/* Small phones */
-@media (max-width: 480px) {
-    body {
-        padding: 12px;
-    }
-
-    .platform {
-        padding: 14px;
-    }
-
-    .platform h2 {
-        font-size: 18px;
-    }
-
-    .theme-btn {
-        padding: 12px;
+    div.updated-at {
+        padding-right: 8px;
+        padding-left: 8px;
     }
 }

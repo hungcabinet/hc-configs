@@ -30,6 +30,40 @@ function toggleTheme() {
     applyTheme(newTheme);
     setCookie('theme', newTheme);
 }
+function formatRelativeTime(timestamp) {
+    const now = Math.floor(Date.now() / 1000);
+    const diff = now - timestamp;
+
+    const units = [
+        { name: 'г.', seconds: 31536000 },
+        { name: 'мес.', seconds: 2592000 },
+        { name: 'д.', seconds: 86400 },
+        { name: 'ч.', seconds: 3600 },
+        { name: 'мин.', seconds: 60 }
+    ];
+
+    for (const unit of units) {
+        const value = Math.floor(diff / unit.seconds);
+
+        if (value >= 1) {
+            return `${value}${unit.name}`;
+        }
+    }
+
+    return '0мин.';
+}
+
+function updateRelativeDates() {
+    const elements = document.querySelectorAll('.updated-at');
+
+    elements.forEach(el => {
+        const timestamp = Number(el.dataset.updated);
+
+        if (!timestamp) return;
+
+        el.textContent = formatRelativeTime(timestamp);
+    });
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     const savedTheme = getCookie('theme') || 'dark';
@@ -58,4 +92,8 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Ошибка копирования');
         }
     }));
+
+    updateRelativeDates();
+
+    setInterval(updateRelativeDates, 60 * 1000);
 });

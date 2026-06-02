@@ -19,8 +19,10 @@ function getUserSourcePath(config, userName, srvName) {
     return path.join(config.sourceDirectoryPath, srvName, userName);
 }
 
-function getUserDestinationPath(config, userName, srvName) {
-    return path.join(config.destinationDirectoryPath, "users", userName, srvName);
+function getUserDestinationPath(config, userName, srvName = undefined) {
+    return srvName === undefined
+        ? path.join(config.destinationDirectoryPath, "users", userName)
+        : path.join(config.destinationDirectoryPath, "users", userName, srvName);
 }
 
 function getUserFiles(config) {

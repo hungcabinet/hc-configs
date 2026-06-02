@@ -56,6 +56,10 @@
                     {% endif %}
                     {% endfor %}
                 </div>
+                {% if meta[link.path] is defined %}
+                <div class="spacer"></div>
+                <div class="updated-at" data-updated="{{meta[link.path].time}}"></div>
+                {% endif %}
             </div>
             {% endfor %}
         </div>

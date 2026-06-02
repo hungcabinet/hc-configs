@@ -10,7 +10,7 @@ import throne from "./throne.js";
 import android from "./android.js";
 import config from "./config.js";
 
-function toOutbound(vlessLink, defaultFingerPrint = "chrome", tag = 'proxy', domainResolver = 'google'){
+function toOutbound(vlessLink, defaultFingerPrint = "firefox", tag = 'proxy', domainResolver = 'google'){
     const warnings = [];
     const errors = [];
 
@@ -78,9 +78,9 @@ function toOutbound(vlessLink, defaultFingerPrint = "chrome", tag = 'proxy', dom
         }
 
         // Fingerprint
-        const validFingerprints = ['chrome', 'firefox', 'edge'];
+        const validFingerprints = ['safari', 'firefox', 'edge'];
         if (!validFingerprints.includes(fp)) {
-            fp = defaultFingerPrint || "chrome";
+            fp = defaultFingerPrint || "firefox";
         }
 
         // Сборка outbound
@@ -241,13 +241,13 @@ function fixVlessLink(vlessLink, customName = undefined){
 
     const params = url.searchParams;
 
-    let fp = params.get('fp') || 'chrome';
+    let fp = params.get('fp') || 'firefox';
 
     if (contextUtil.getPlatform() === "ios"){
         params.set('fp', "safari");
     }
     else{
-        const validFingerprints = ['chrome', 'firefox', 'edge'];
+        const validFingerprints = ['safari', 'firefox', 'edge'];
 
         if (!validFingerprints.includes(fp)) {
             fp = validFingerprints[Math.floor(Math.random() * validFingerprints.length)];

@@ -5,6 +5,7 @@ import files from "./files.js";
 import contextUtil from "./context.js";
 import configUtil from "./config.js";
 import path from "path";
+import meta from "./meta.js";
 
 let webServerData = {
     users: {}
@@ -158,7 +159,8 @@ function addUserSimpleLink(link, text, linkType = "common", attributes= ["open"]
             download: link,
             text: text,
             linkType: linkType,
-            attributes: attributes
+            attributes: attributes,
+            path: url.pathname,
         });
     }
 
@@ -225,9 +227,12 @@ async function renderUserIndex(user){
         }
     }
 
+    let metaData = await meta.refreshMeta(user);
+
     const html = await renderTemplate(configUtil.getConfigPath("webSiteTemplate.twig"), {
         baseUrl: webConfig.baseUrl,
-        user: getUserData(user)
+        user: getUserData(user),
+        meta: metaData
     });
 
     fs.writeFileSync(htmlPath, html);
