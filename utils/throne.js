@@ -117,31 +117,83 @@ function addLinkToSubscription(targetDir, data){
     return filePath;
 }
 
-function addAmneziaSubscription(targetDir, amneziaConfig, ip, port){
+function addAmneziaSubscription(targetDir, amneziaData)
+{
     let server = contextUtil.getServer();
     let serverName = config.getVpnServerConfig(server).name || server;
 
-    let cleanConfig = amneziaConfig
-        .replace(/\uFEFF/g, '')
-        .replace(/\r\n/g, "\n")
-        .replace(/\r/g, "\n")
-        .trim();
+    let linkObj = {}
 
-    let subscriptionData = {
-        extra_core_args: "-c %s",
-        extra_core_conf: cleanConfig,
-        extra_core_path: "../custom-cores/awg-proxy/wireproxy.exe",
-        name: `${serverName} [awg]`,
-        no_logs: false,
-        socks_address: ip,
-        socks_port: port,
-        type: "extracore"
+    linkObj["address"] = amneziaData.interface.address;
+
+    if (amneziaData.interface.awg !== undefined){
+        linkObj["amnezia_wg"] = {}
+
+        linkObj["amnezia_wg"]["jc"] = amneziaData.interface.awg.Jc;
+        linkObj["amnezia_wg"]["jmin"] = amneziaData.interface.awg.Jmin;
+        linkObj["amnezia_wg"]["jmax"] = amneziaData.interface.awg.Jmax;
+
+        linkObj["amnezia_wg"]["s1"] = amneziaData.interface.awg.S1;
+        linkObj["amnezia_wg"]["s2"] = amneziaData.interface.awg.S2;
+
+        if (amneziaData.interface.awg.S3 !== undefined){
+            linkObj["amnezia_wg"]["s4"] = amneziaData.interface.awg.S4;
+        }
+
+        if (amneziaData.interface.awg.S4 !== undefined){
+            linkObj["amnezia_wg"]["s4"] = amneziaData.interface.awg.S4;
+        }
+
+        linkObj["amnezia_wg"]["h1"] = amneziaData.interface.awg.H1;
+        linkObj["amnezia_wg"]["h2"] = amneziaData.interface.awg.H2;
+        linkObj["amnezia_wg"]["h3"] = amneziaData.interface.awg.H3;
+        linkObj["amnezia_wg"]["h4"] = amneziaData.interface.awg.H4;
+
+        if (amneziaData.interface.awg.I1 !== undefined){
+            linkObj["amnezia_wg"]["i1"] = amneziaData.interface.awg.I1;
+        }
+        if (amneziaData.interface.awg.I2 !== undefined){
+            linkObj["amnezia_wg"]["i2"] = amneziaData.interface.awg.I2;
+        }
+        if (amneziaData.interface.awg.I3 !== undefined){
+            linkObj["amnezia_wg"]["i3"] = amneziaData.interface.awg.I3;
+        }
+        if (amneziaData.interface.awg.I4 !== undefined){
+            linkObj["amnezia_wg"]["i4"] = amneziaData.interface.awg.I4;
+        }
+        if (amneziaData.interface.awg.I5 !== undefined){
+            linkObj["amnezia_wg"]["i5"] = amneziaData.interface.awg.I5;
+        }
     }
 
-    let jsonString = JSON.stringify(subscriptionData, null, 0);
+    if (amneziaData.interface.mtu !== undefined){
+        linkObj["mtu"] = amneziaData.interface.mtu;
+    }
+
+    linkObj["peers"] = amneziaData.peers.map(peer => {
+        const result = {};
+
+        result["address"] = peer.endpointHost;
+        result["port"] = peer.endpointPort;
+        if (peer.PersistentKeepalive !== undefined){
+            result["persistent_keepalive_interval"] = peer.PersistentKeepalive;
+        }
+        result["public_key"] = peer.PublicKey;
+        if (peer.PresharedKey !== undefined){
+            result["pre_shared_key"] = peer.PresharedKey;
+        }
+
+        return result;
+    })
+
+    linkObj["private_key"] = amneziaData.interface.privateKey;
+    linkObj["tag"] = serverName;
+    linkObj["type"] = "wireguard";
+
+    let jsonString = JSON.stringify(linkObj, null, 0);
     let base64 = base64url(jsonString);
     let link = `json://throne#${base64}`;
 
-    return addLinkToSubscription(targetDir, link);
+    return { filePath: addLinkToSubscription(targetDir, link), link };
 }
 export default { extractWindowsRoutes, addLinkToSubscription, addAmneziaSubscription };

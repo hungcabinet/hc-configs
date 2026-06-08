@@ -428,26 +428,19 @@ function generateUserData(userFileData){
         contextUtil.withPlatform("windows", () => {
             let winDir = contextUtil.getWinDir();
 
-            let awgConfFile =  path.join(winDir, `${files.getFileName("awg")}.conf`);
-
-            fs.copyFileSync(userFileData.path, awgConfFile);
-            let socks = config.getSocksConfig();
-
-            let socksIp = socks.ip || "127.0.0.1";
-            let socksPort = socks.port || 1080;
-
-            fs.appendFileSync(awgConfFile, `\n\n[Socks5]\nBindAddress = ${socksIp}:${socksPort}`);
-            webSite.addUserFileLink(awgConfFile, `[${contextUtil.getProtocol()}] конфиг для Throne extra core`, "config", ["download", "copy-data"]);
+            let awgLinkFile =  path.join(winDir, `${files.getFileName("awg")}.link`);
 
             contextUtil.withUserData(contextUtil.getUser(), "common", () => {
                 winDir = contextUtil.getWinDir();
             });
 
-            let configContent = fs.readFileSync(awgConfFile, "utf-8");
-            let subscriptionFilePath = throne.addAmneziaSubscription(winDir, configContent, socksIp, socksPort);
+            let linkData = throne.addAmneziaSubscription(winDir, data.parsed);
+            fs.writeFileSync(awgLinkFile, linkData.link);
+
+            webSite.addUserFileLink(awgLinkFile, `[${contextUtil.getProtocol()}] ссылка для Throne`, "link", ["download", "copy-data"]);
 
             contextUtil.withUserData(contextUtil.getUser(), "common", () => {
-                webSite.addUserFileLink(subscriptionFilePath, `Подписка для Throne`, "subscription", ["copy-link"]);
+                webSite.addUserFileLink(linkData.filePath, `Подписка для Throne`, "subscription", ["copy-link"]);
             });
         });
     });
