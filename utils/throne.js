@@ -187,7 +187,7 @@ function addAmneziaSubscription(targetDir, amneziaData)
     })
 
     linkObj["private_key"] = amneziaData.interface.privateKey;
-    linkObj["tag"] = serverName;
+    linkObj["tag"] = `${serverName} [${contextUtil.getProtocol()}]`;
     linkObj["type"] = "wireguard";
 
     let jsonString = JSON.stringify(linkObj, null, 0);

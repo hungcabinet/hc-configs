@@ -206,6 +206,9 @@ function generateUserData(userFileData){
             contextUtil.withPlatform("windows", () => {
                 let winDir = contextUtil.getWinDir();
 
+                let server = contextUtil.getServer();
+                let serverName = config.getVpnServerConfig(server).name || server;
+
                 let linkUrl = new URL(`https://${data.parsed.sni}`);
 
                 linkUrl.searchParams.set("uot", "1");
@@ -217,7 +220,7 @@ function generateUserData(userFileData){
                 linkUrl.username = data.parsed.username;
                 linkUrl.password = data.parsed.password;
 
-                linkUrl.hash = `${contextUtil.getServer()} [${contextUtil.getProtocol()}]`;
+                linkUrl.hash = `${serverName} [${contextUtil.getProtocol()}]`;
 
                 let link = linkUrl.href
                     .replace("https://", protocol.quic ? "naive+quic://" : "naive+https://")

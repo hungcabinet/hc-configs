@@ -216,7 +216,7 @@ function generateUserData(userFileData){
             let server = contextUtil.getServer();
             let serverName = config.getVpnServerConfig(server).name || server;
 
-            let fixedVlessLink = fixVlessLink(vlessLink, serverName);
+            let fixedVlessLink = fixVlessLink(vlessLink, `${serverName} [${contextUtil.getProtocol()}]`);
 
             let linkFilePath = path.join(winDir, `${files.getFileName()}.link`);
             fs.writeFileSync(linkFilePath, fixedVlessLink);
