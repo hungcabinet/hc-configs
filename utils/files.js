@@ -1,8 +1,7 @@
 ﻿import fs from 'fs';
 import path from 'path';
 import config from './config.js';
-import contextUtil from "./context.js";
-import naiveproxy from "./naiveproxy.js";
+import protocolRegistry from './protocolRegistry.js';
 
 function getRelativeDestinationFilePath(filePath, userName = undefined) {
     let fullPath = path.resolve(filePath);
@@ -15,108 +14,105 @@ function getRelativeDestinationFilePath(filePath, userName = undefined) {
     return path.relative(destinationDirPath, fullPath);
 }
 
-function getUserSourcePath(config, userName, srvName) {
-    return path.join(config.sourceDirectoryPath, srvName, userName);
+function getUserSourcePath(configData, userName, srvName) {
+    return path.join(configData.sourceDirectoryPath, srvName, userName);
 }
 
-function getUserDestinationPath(config, userName, srvName = undefined) {
+function getUserDestinationPath(configData, userName, srvName = undefined) {
     return srvName === undefined
-        ? path.join(config.destinationDirectoryPath, "users", userName)
-        : path.join(config.destinationDirectoryPath, "users", userName, srvName);
+        ? path.join(configData.destinationDirectoryPath, "users", userName)
+        : path.join(configData.destinationDirectoryPath, "users", userName, srvName);
 }
 
-function getUserFiles(config) {
+function toFileEntry(entry, basePath) {
+    const fullPath = path.join(basePath, entry.name);
 
-    const result = [];
+    return {
+        name: entry.name,
+        path: fullPath,
+        ext: path.extname(entry.name).toLowerCase(),
+    };
+}
 
-    function pushResult(data){
-        let existingData = result.find(value => value.srvName === data.srvName && value.userName === data.userName);
+function pushUserFilesResult(result, data) {
+    let existingData = result.find(value => value.srvName === data.srvName && value.userName === data.userName);
 
-        if (existingData !== undefined) {
-            existingData.files = [...existingData.files, ...data.files];
-            return;
-        }
-
-        result.push(data);
+    if (existingData !== undefined) {
+        existingData.files = [...existingData.files, ...data.files];
+        return;
     }
 
-    const srvDirs = fs.readdirSync(config.sourceDirectoryPath, { withFileTypes: true });
+    result.push(data);
+}
+
+function collectPerUserDirectory(configData, srvName, userName) {
+    const srcDir = getUserSourcePath(configData, userName, srvName);
+    const dstDir = getUserDestinationPath(configData, userName, srvName);
+
+    fs.mkdirSync(dstDir, { recursive: true });
+
+    const entries = fs.readdirSync(srcDir, { withFileTypes: true });
+    const files = entries
+        .filter(entry => entry.isFile())
+        .map(entry => toFileEntry(entry, srcDir));
+
+    return {
+        srvName,
+        userName,
+        srcDir,
+        dstDir,
+        files,
+    };
+}
+
+function collectServerSharedFile(configData, srvName, handler, entry) {
+    const fileEntry = toFileEntry(entry, entry.path);
+    const users = handler.extractUsers(fileEntry.path);
+    const results = [];
+
+    for (const userName of users) {
+        const srcDir = getUserSourcePath(configData, userName, srvName);
+        const dstDir = getUserDestinationPath(configData, userName, srvName);
+
+        fs.mkdirSync(dstDir, { recursive: true });
+
+        results.push({
+            srvName,
+            userName,
+            srcDir,
+            dstDir,
+            files: [fileEntry],
+        });
+    }
+
+    return results;
+}
+
+function getUserFiles(configData) {
+    const result = [];
+    const srvDirs = fs.readdirSync(configData.sourceDirectoryPath, { withFileTypes: true });
 
     for (const srvDir of srvDirs) {
-
         if (!srvDir.isDirectory()) continue;
 
         const srvName = srvDir.name;
+        const srvPath = path.join(configData.sourceDirectoryPath, srvName);
+        const entities = fs.readdirSync(srvPath, { withFileTypes: true });
 
-        const srvPath = path.join(config.sourceDirectoryPath, srvName);
-
-        const userDirs = fs.readdirSync(srvPath, { withFileTypes: true });
-
-        for (const entity of userDirs) {
-
-            if (!entity.isDirectory()){
-                if (/^naiveproxy.*\.json$/i.test(entity.name)){
-
-                    const fullPath = path.join(entity.path, entity.name);
-                    const ext = path.extname(entity.name).toLowerCase();
-
-                    let users = naiveproxy.getUsers(fullPath);
-
-                    for (const userName of users) {
-                        const srcDir = getUserSourcePath(config, userName, srvName);
-                        const dstDir = getUserDestinationPath(config, userName, srvName);
-
-                        fs.mkdirSync(dstDir, { recursive: true });
-
-                        pushResult({
-                            srvName: srvName,
-                            userName: userName,
-                            srcDir: srcDir,
-                            dstDir: dstDir,
-                            files: [{
-                                name: entity.name,
-                                path: fullPath,
-                                ext: ext
-                            }]
-                        });
-                    }
-                }
+        for (const entity of entities) {
+            if (entity.isDirectory()) {
+                pushUserFilesResult(result, collectPerUserDirectory(configData, srvName, entity.name));
+                continue;
             }
-            else{
-                const userName = entity.name;
 
-                const srcDir = getUserSourcePath(config, userName, srvName);
-                const dstDir = getUserDestinationPath(config, userName, srvName);
+            if (!entity.isFile()) continue;
 
-                fs.mkdirSync(dstDir, { recursive: true });
+            const handler = protocolRegistry.findHandler(entity.name);
 
-                const entries = fs.readdirSync(srcDir, { withFileTypes: true });
-
-                const files = [];
-
-                for (const entry of entries) {
-
-                    if (!entry.isFile()) continue;
-
-                    const ext = path.extname(entry.name).toLowerCase();
-
-                    const fullPath = path.join(srcDir, entry.name);
-
-                    files.push({
-                        name: entry.name,
-                        path: fullPath,
-                        ext: ext
-                    });
-
+            if (handler?.layout === 'server-shared' && handler.extractUsers) {
+                for (const data of collectServerSharedFile(configData, srvName, handler, entity)) {
+                    pushUserFilesResult(result, data);
                 }
-
-                pushResult({
-                    srvName: srvName,
-                    userName: userName,
-                    srcDir: srcDir,
-                    dstDir: dstDir,
-                    files: files
-                });
             }
         }
     }
@@ -124,8 +120,24 @@ function getUserFiles(config) {
     return result;
 }
 
-function getFileName(suffix = contextUtil.getProtocol()) {
-    return `${contextUtil.getServer()}-${contextUtil.getUser()}-${suffix}`;
+function resolveFileNameSuffix(ctx, suffix) {
+    if (ctx.profileId === undefined) {
+        return suffix;
+    }
+
+    if (suffix === ctx.protocol) {
+        return ctx.profileId;
+    }
+
+    if (suffix.startsWith(`${ctx.protocol}-`)) {
+        return `${ctx.profileId}${suffix.slice(ctx.protocol.length)}`;
+    }
+
+    return suffix;
+}
+
+function getFileName(ctx, suffix = ctx.protocol) {
+    return `${ctx.server}-${ctx.user}-${resolveFileNameSuffix(ctx, suffix)}`;
 }
 
 function prepareDir(dirPath){
@@ -142,19 +154,19 @@ function prepareDir(dirPath){
     }
 }
 
-function prepareContextDirs(){
-    prepareDir(contextUtil.getCommonDir());
-    prepareDir(contextUtil.getWinDir());
-    prepareDir(contextUtil.getAndroidDir());
-    prepareDir(contextUtil.getIosDir());
-    prepareDir(contextUtil.getRawDir());
+function prepareContextDirs(ctx){
+    prepareDir(ctx.getCommonDir());
+    prepareDir(ctx.getWinDir());
+    prepareDir(ctx.getAndroidDir());
+    prepareDir(ctx.getIosDir());
+    prepareDir(ctx.getRawDir());
 }
 
-function saveJsonObject(jObject, targetDir, type){
-    let filePath = path.join(targetDir, `${getFileName(`${contextUtil.getProtocol()}-${type}`)}.json`);
+function saveJsonObject(ctx, jObject, targetDir, type){
+    let filePath = path.join(targetDir, `${getFileName(ctx, `${ctx.protocol}-${type}`)}.json`);
     fs.writeFileSync(filePath, JSON.stringify(jObject, null, 2));
 
     return filePath;
 }
 
-export default { getUserFiles, getFileName, prepareContextDirs, prepareDir, saveJsonObject, getRelativeDestinationFilePath,  getUserDestinationPath };
+export default { getUserFiles, getFileName, prepareContextDirs, prepareDir, saveJsonObject, getRelativeDestinationFilePath, getUserDestinationPath };

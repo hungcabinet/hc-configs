@@ -2,8 +2,6 @@
 import fs from "fs";
 import config from "./config.js";
 import files from "./files.js";
-import contextUtil from "./context.js";
-import configUtil from "./config.js";
 import path from "path";
 import meta from "./meta.js";
 
@@ -123,7 +121,7 @@ function getServerData(user, platform, server){
     return result;
 }
 
-function addUserFileLink(filePath, text, linkType = "common", attributes= ["open"]){
+function addUserFileLink(ctx, filePath, text, linkType = "common", attributes= ["open"]){
     if (!webConfig.enabled){
         return;
     }
@@ -131,32 +129,32 @@ function addUserFileLink(filePath, text, linkType = "common", attributes= ["open
     let baseUrl = webConfig.baseUrl;
     let url = new URL(baseUrl);
 
-    let relative = files.getRelativeDestinationFilePath(filePath, contextUtil.getUser());
+    let relative = files.getRelativeDestinationFilePath(filePath, ctx.user);
 
     url.pathname = `/${relative}`;
 
-    return addUserSimpleLink(url.href, text, linkType, attributes);
+    return addUserSimpleLink(ctx, url.href, text, linkType, attributes, filePath);
 }
 
-function addUserSimpleLink(link, text, linkType = "common", attributes= ["open"]){
+function addUserSimpleLink(ctx, link, text, linkType = "common", attributes= ["open"], downloadLink = link){
     if (!webConfig.enabled){
         return;
     }
 
     let url = new URL(link);
 
-    let webUser = webConfig.users.find(s => s.userName === contextUtil.getUser());
+    let webUser = webConfig.users.find(s => s.userName === ctx.user);
     if (webUser !== undefined){
         url.username = webUser.userName;
         url.password = webUser.password;
     }
 
-    let serverData = getServerData(contextUtil.getUser(), contextUtil.getPlatform(), contextUtil.getServer());
+    let serverData = getServerData(ctx.user, ctx.platform, ctx.server);
 
     if (!serverData.links.some(v => v.href === url.href && v.text === text && v.linkType === linkType)){
         serverData.links.push({
             href: url.href,
-            download: link,
+            download: downloadLink,
             text: text,
             linkType: linkType,
             attributes: attributes,
@@ -167,12 +165,12 @@ function addUserSimpleLink(link, text, linkType = "common", attributes= ["open"]
     return url.href;
 }
 
-function addSpecificLink(link, text, linkType = "common"){
+function addSpecificLink(ctx, link, text, linkType = "common"){
     if (!webConfig.enabled){
         return;
     }
 
-    let serverData = getServerData(contextUtil.getUser(), contextUtil.getPlatform(), contextUtil.getServer());
+    let serverData = getServerData(ctx.user, ctx.platform, ctx.server);
 
     if (!serverData.links.some(v => v.href === link && v.text === text && v.linkType === linkType)){
         serverData.links.push({
@@ -190,7 +188,7 @@ async function renderUserIndex(user){
         return;
     }
 
-    let commonConfig = configUtil.getCommonConfig();
+    let commonConfig = config.getCommonConfig();
 
     let htmlPath = path.join(commonConfig.destinationDirectoryPath, "users", user, "index.html");
 
@@ -229,7 +227,7 @@ async function renderUserIndex(user){
 
     let metaData = await meta.refreshMeta(user);
 
-    const html = await renderTemplate(configUtil.getConfigPath("webSiteTemplate.twig"), {
+    const html = await renderTemplate(config.getConfigPath("webSiteTemplate.twig"), {
         baseUrl: webConfig.baseUrl,
         user: getUserData(user),
         meta: metaData
@@ -239,7 +237,7 @@ async function renderUserIndex(user){
 }
 
 function writeWebFiles(){
-    let commonConfig = configUtil.getCommonConfig();
+    let commonConfig = config.getCommonConfig();
 
     let siteDstPath = path.join(commonConfig.destinationDirectoryPath, "site");
     let docsDstPath = path.join(commonConfig.destinationDirectoryPath, "docs");
@@ -247,18 +245,21 @@ function writeWebFiles(){
     files.prepareDir(siteDstPath);
     files.prepareDir(docsDstPath);
 
-    let cssSourcePath = configUtil.getConfigPath("site/site.css");
-    let jsSourcePath = configUtil.getConfigPath("site/site.js");
+    let cssSourcePath = config.getConfigPath("site/site.css");
+    let jsSourcePath = config.getConfigPath("site/site.js");
 
-    let usersManualSourcePath = configUtil.getConfigPath("docs/for-users.pdf");
+    let usersManualSourcePath = config.getConfigPath("docs/for-users.pdf");
+    let adminsManualSourcePath = config.getConfigPath("docs/for-admins.pdf");
 
     let cssPath = path.join(siteDstPath, "site.css");
     let jsPath = path.join(siteDstPath, "site.js");
     let usersManualPath = path.join(docsDstPath, "for-users.pdf");
+    let adminsManualPath = path.join(docsDstPath, "for-admins.pdf");
 
     fs.copyFileSync(cssSourcePath, cssPath);
     fs.copyFileSync(jsSourcePath, jsPath);
     fs.copyFileSync(usersManualSourcePath, usersManualPath);
+    fs.copyFileSync(adminsManualSourcePath, adminsManualPath);
 }
 
 export default { startCollectData, addUserFileLink, renderUserIndex, addSpecificLink, writeWebFiles};

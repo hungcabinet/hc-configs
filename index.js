@@ -1,79 +1,70 @@
 ﻿import fs from 'fs';
 import path from 'path';
-import awg from './utils/awg.js';
-import vless from './utils/vless.js';
-import files from "./utils/files.js";
-import configUtil from "./utils/config.js";
-import rsync from "./utils/rsync.js";
 import config from "./utils/config.js";
+import rsync from "./utils/rsync.js";
+import sshAuth from "./utils/sshAuth.js";
+import files from "./utils/files.js";
 import webServer from "./utils/webSite.js";
-import context from "./utils/context.js";
+import { createContext } from "./utils/generationContext.js";
 import throne from "./utils/throne.js";
 import telegram from "./utils/telegram.js";
-import naiveproxy from "./utils/naiveproxy.js";
+import protocolRegistry from "./utils/protocolRegistry.js";
+import report from "./utils/report.js";
 
 async function mainProcess(){
-    webServer.startCollectData();
+    report.reset();
 
-    let commonConfig = configUtil.getCommonConfig();
+    let commonConfig = config.getCommonConfig();
     let userFilesData = files.getUserFiles(commonConfig)
 
     let users = [...new Set(userFilesData.map(data => data.userName))];
 
     for (const user of users) {
-        context.withUserData(user, "common", () => {
-            files.prepareContextDirs();
-        });
+        const ctx = createContext(user, "common");
+        files.prepareContextDirs(ctx);
     }
 
     for(let i = 0; i < userFilesData.length; i++) {
         let data = userFilesData[i];
+        const ctx = createContext(data.userName, data.srvName);
 
-        context.withUserData(data.userName, data.srvName, () => {
-            files.prepareContextDirs();
+        files.prepareContextDirs(ctx);
 
-            for(let i = 0; i < data.files.length; i++) {
-                let file = data.files[i];
+        for(let j = 0; j < data.files.length; j++) {
+            let file = data.files[j];
+            let handler = protocolRegistry.findHandler(file.name);
 
-                if (/^vless.*\.link$/i.test(file.name)) {
-                    vless.generateUserData(file);
-
-                } else if (/^awg.*\.conf$/i.test(file.name)) {
-                    awg.generateUserData(file);
-
-                } else if (/^telegram.*\.link$/i.test(file.name)) {
-                    telegram.generateUserData(file);
-                } else if (/^naiveproxy.*\.json$/i.test(file.name)){
-                    naiveproxy.generateUserData(file);
-                }
+            if (handler !== undefined) {
+                handler.generate(ctx.withProfile(handler.getProfileId(file.name)), file);
+            } else {
+                report.warn('unknown', file.path, `Неизвестный тип файла: ${file.name}`);
             }
-        });
+        }
     }
 
     for (const user of users) {
-        let commonServerDest = files.getUserDestinationPath(commonConfig, user, "common");
+        const commonCtx = createContext(user, "common");
+        const commonServerDest = files.getUserDestinationPath(commonConfig, user, "common");
 
-        context.withUserData(user, "common", () => {
+        const androidCtx = commonCtx.withPlatform("android");
+        webServer.addSpecificLink(
+            androidCtx,
+            telegram.generateSocksLink(),
+            "[TELEGRAM] Локальный socks5 прокси",
+            "telegram"
+        );
 
-            context.withPlatform("android", ()=>{
-                let androidTelegramLink = telegram.generateSocksLink();
-                webServer.addSpecificLink(androidTelegramLink, "[TELEGRAM] Локальный socks5 прокси", "telegram")
-            });
+        let windowsRules = throne.extractWindowsRoutes();
+        const windowsCtx = commonCtx.withPlatform("windows");
 
-            let windowsRules = throne.extractWindowsRoutes();
+        let directRulesPath = path.join(commonServerDest, "windows", "direct-rules.txt");
+        let proxyRulesPath = path.join(commonServerDest, "windows", "proxy-rules.txt");
 
-            context.withPlatform("windows", ()=>{
+        fs.writeFileSync(directRulesPath, windowsRules.direct.join("\n").trim());
+        fs.writeFileSync(proxyRulesPath, windowsRules.proxy.join("\n").trim());
 
-                let directRulesPath = path.join(commonServerDest, "windows", "direct-rules.txt");
-                let proxyRulesPath = path.join(commonServerDest, "windows", "proxy-rules.txt");
-
-                fs.writeFileSync(directRulesPath, windowsRules.direct.join("\n").trim());
-                fs.writeFileSync(proxyRulesPath, windowsRules.proxy.join("\n").trim());
-
-                webServer.addUserFileLink(directRulesPath, "Direct правила маршрутизации", "routing", ["download", "copy-data"]);
-                webServer.addUserFileLink(proxyRulesPath, "Proxy правила маршрутизации", "routing", ["download", "copy-data"]);
-            });
-        });
+        webServer.addUserFileLink(windowsCtx, directRulesPath, "Direct правила маршрутизации", "routing", ["download", "copy-data"]);
+        webServer.addUserFileLink(windowsCtx, proxyRulesPath, "Proxy правила маршрутизации", "routing", ["download", "copy-data"]);
 
         await webServer.renderUserIndex(user);
     }
@@ -81,6 +72,13 @@ async function mainProcess(){
     webServer.writeWebFiles();
 
     await syncGeneratedData(commonConfig);
+    await updateRemoteAuth();
+
+    report.printSummary();
+
+    if (report.hasErrors()) {
+        process.exit(1);
+    }
 }
 
 async function syncGeneratedData(commonConfig){
@@ -94,6 +92,18 @@ async function syncGeneratedData(commonConfig){
     await rsync.syncDstFiles(path.resolve(commonConfig.destinationDirectoryPath), rsyncConfig);
 }
 
+async function updateRemoteAuth() {
+    let webServerConfig = config.getWebServerConfig();
+
+    await sshAuth.updateRemoteUsers(webServerConfig);
+}
+
 mainProcess().catch(error => {
-    console.error(error);
+    if (error.code === 'CONFIG_NOT_FOUND' || error.code === 'CONFIG_INVALID' || error.code === 'CONFIG_INVALID_JSON' || error.code === 'CONFIG_READ_ERROR') {
+        console.error(error.message);
+    } else {
+        console.error(error);
+    }
+
+    process.exit(1);
 });

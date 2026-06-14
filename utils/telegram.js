@@ -1,15 +1,9 @@
 ﻿import singBox from "./singBox.js";
-import configUtil from "./config.js";
-import contextUtil from "./context.js";
-import fs from "fs";
-import path from "path";
-import files from "./files.js";
-import webSite from "./webSite.js";
+import config from "./config.js";
 
 function generateSocksLink(){
     let socksInbound = singBox.getSocksInbound();
-    let config = configUtil.getVpnServerConfig(contextUtil.getServer())
-    let socks = configUtil.getSocksConfig();
+    let socks = config.getSocksConfig();
 
     let ip = socks?.ip || socksInbound.listen;
     let port = socks?.port || socksInbound.listen_port;
@@ -30,17 +24,4 @@ function generateSocksLink(){
     return link;
 }
 
-function generateUserData(userFileData){
-    contextUtil.withProtocol("telegram", () => {
-        let link = fs.readFileSync(userFileData.path, "utf-8");
-
-        contextUtil.withPlatform("telegram", () => {
-            let linkFilePath = path.join(contextUtil.getCommonDir(), `${files.getFileName()}.link`);
-
-            fs.copyFileSync(userFileData.path, linkFilePath);
-            webSite.addSpecificLink(link, `[${contextUtil.getProtocol()}] Telegram proxy`, "telegram");
-        });
-    });
-}
-
-export default { generateSocksLink, generateUserData };
+export default { generateSocksLink };

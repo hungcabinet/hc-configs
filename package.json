@@ -3,6 +3,7 @@
   "dependencies": {
     "base64url": "^3.0.1",
     "deepmerge": "^4.3.1",
+    "js-yaml": "^4.2.0",
     "twig": "^3.0.0"
   }
 }

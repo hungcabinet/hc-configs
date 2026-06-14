@@ -1,16 +1,14 @@
-﻿import contextUtil from "./context.js";
-import config from "./config.js";
+﻿import config from "./config.js";
 import merge from "deepmerge";
-import configUtil from "./config.js";
 
-const singBoxTemplate = configUtil.getConfigContent("singBoxTemplate.json");
-const socksInboundTemplate = configUtil.getConfigContent("socksInboundTemplate.json");
-const tunInboundTemplate = configUtil.getConfigContent("tunInboundTemplate.json");
+const singBoxTemplate = config.getConfigContent("singBoxTemplate.json");
+const socksInboundTemplate = config.getConfigContent("socksInboundTemplate.json");
+const tunInboundTemplate = config.getConfigContent("tunInboundTemplate.json");
 
 function getSocksInbound(){
     let inbound = JSON.parse(socksInboundTemplate);
 
-    let socks = configUtil.getSocksConfig();
+    let socks = config.getSocksConfig();
 
     if (socks === undefined) {
         return inbound;
@@ -73,13 +71,10 @@ function getIosTemplate(){
     return result;
 }
 
-function getSubscriptionLink(originalLink, type){
+function getSubscriptionLink(ctx, originalLink, type){
     let encodedLink = encodeURIComponent(originalLink);
 
-    let server = contextUtil.getServer();
-    let serverName = config.getVpnServerConfig(server).name || server;
-
-    let connectionName = encodeURIComponent(`${serverName} [${contextUtil.getProtocol()} ${type}]`)
+    let connectionName = encodeURIComponent(`${ctx.serverDisplayName()} [${ctx.protocol} ${type}]`)
 
     return `sing-box://import-remote-profile?url=${encodedLink}#${connectionName}`;
 }

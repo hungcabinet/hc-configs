@@ -4,26 +4,40 @@
     "destinationDirectoryPath": "./data/dst"
   },
   "socks": {
-    "ip": "127.0.0.2",
-    "port": 8080,
-    "user": "user",
-    "password": "password"
+    "ip": "127.0.0.1",
+    "port": 1080,
+    "user": "socks-user",
+    "password": "socks-password"
   },
   "vpnServers": {
     "default": {
       "naiveproxy": {
         "useQuic": false
+      },
+      "mieru": {
+        "ip": "203.0.113.10"
       }
     },
     "servers": {
-      "timeweb-msk": {
-        "name": "Timeweb MSK->NL",
+      "server-1": {
+        "name": "Основной VPN",
         "naiveproxy": {
-          "useQuic": true
+          "ip": "203.0.113.10",
+          "useQuic": false
+        },
+        "mieru": {
+          "ip": "203.0.113.10"
         }
       },
-      "ufo-msk": {
-        "name": "UFO MSK->NL"
+      "server-2": {
+        "name": "Резервный VPN",
+        "naiveproxy": {
+          "ip": "203.0.113.11",
+          "useQuic": true
+        },
+        "mieru": {
+          "ip": "203.0.113.11"
+        }
       },
       "common": {
         "name": "Общие данные"
@@ -31,23 +45,29 @@
     }
   },
   "rsync": {
-    "enabled": true,
-    "host": "host-ip-or-domain",
+    "enabled": false,
+    "host": "example.com",
     "destination": "/var/www/html/config-site/",
-    "user": "user-for-rsync"
+    "user": "deploy"
   },
   "webServer": {
     "enabled": true,
-    "baseUrl": "https://my.awesome.site",
+    "baseUrl": "https://configs.example.com",
     "users": [
       {
         "userName": "user1",
-        "password": "pass1"
+        "password": "change-me"
       },
       {
         "userName": "user2",
-        "password": "pass2"
+        "password": "change-me"
       }
-    ]
+    ],
+    "sshAuth": {
+      "enabled": false,
+      "host": "example.com",
+      "user": "deploy",
+      "htpasswdPath": "/etc/nginx/.htpasswd"
+    }
   }
 }

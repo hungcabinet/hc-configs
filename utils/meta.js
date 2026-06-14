@@ -1,5 +1,5 @@
 ﻿import files from "./files.js";
-import configUtil from "./config.js";
+import config from "./config.js";
 import path from "path";
 import fs from "fs";
 import crypto from "crypto";
@@ -18,7 +18,7 @@ function fileHash(path) {
 async function refreshMeta(user, defaultTime = 1779808140) {
     const now = Math.floor(Date.now() / 1000);
 
-    let commonConfig = configUtil.getCommonConfig();
+    let commonConfig = config.getCommonConfig();
 
     let userDestinationPath = files.getUserDestinationPath(commonConfig, user)
     let userMetaPath = path.join(userDestinationPath, "meta.json");

@@ -1,8 +1,6 @@
 ﻿import singBox from "./singBox.js";
-import contextUtil from "./context.js";
 import fs from "fs";
 import path from "path";
-import config from "./config.js";
 import base64url from "base64url";
 
 function extractWindowsRoutes(){
@@ -117,10 +115,9 @@ function addLinkToSubscription(targetDir, data){
     return filePath;
 }
 
-function addAmneziaSubscription(targetDir, amneziaData)
+function addAmneziaSubscription(targetDir, amneziaData, ctx)
 {
-    let server = contextUtil.getServer();
-    let serverName = config.getVpnServerConfig(server).name || server;
+    let serverName = ctx.serverDisplayName();
 
     let linkObj = {}
 
@@ -137,7 +134,7 @@ function addAmneziaSubscription(targetDir, amneziaData)
         linkObj["amnezia_wg"]["s2"] = amneziaData.interface.awg.S2;
 
         if (amneziaData.interface.awg.S3 !== undefined){
-            linkObj["amnezia_wg"]["s4"] = amneziaData.interface.awg.S4;
+            linkObj["amnezia_wg"]["s3"] = amneziaData.interface.awg.S3;
         }
 
         if (amneziaData.interface.awg.S4 !== undefined){
@@ -187,7 +184,7 @@ function addAmneziaSubscription(targetDir, amneziaData)
     })
 
     linkObj["private_key"] = amneziaData.interface.privateKey;
-    linkObj["tag"] = `${serverName} [${contextUtil.getProtocol()}]`;
+    linkObj["tag"] = `${serverName} [${ctx.protocol}]`;
     linkObj["type"] = "wireguard";
 
     let jsonString = JSON.stringify(linkObj, null, 0);

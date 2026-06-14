@@ -1,12 +1,7 @@
-﻿import path from "path";
-import fs from "fs";
-import singBox from "./singBox.js";
-import files from "./files.js";
-import contextUtil from "./context.js";
-import webSite from "./webSite.js";
-import android from "./android.js";
-import config from "./config.js";
-import throne from "./throne.js";
+const source = {
+    layout: 'per-user',
+    pattern: /^awg.*\.conf$/i,
+};
 
 function toEndpoint(configString, tag = 'proxy', domainResolver = 'google') {
     const warnings = [];
@@ -377,73 +372,4 @@ function toEndpoint(configString, tag = 'proxy', domainResolver = 'google') {
     }
 }
 
-function generateUserData(userFileData){
-    contextUtil.withProtocol("awg", () =>{
-        let data = toEndpoint(fs.readFileSync(userFileData.path, "utf-8"));
-
-        for (let j = 0; j < data.warnings.length; j++) {
-            console.warn(`[WARN]: AWG ${userFileData.path} - ${data.warnings[j]}`);
-        }
-
-        for (let j = 0; j < data.errors.length; j++) {
-            console.error(`[ERR]: AWG ${userFileData.path} - ${data.errors[j]}`);
-        }
-
-        if (!data.success){
-            return;
-        }
-
-        let peerHosts = data.parsed.peers.map(value => `${value.endpointHost}/32`);
-
-        let socksInbound = singBox.getSocksInbound();
-        let tunInbound = singBox.getTunInbound(peerHosts);
-
-        contextUtil.withPlatform("raw", () => {
-            let rawDir = contextUtil.getRawDir();
-
-            let outboundFilePath = files.saveJsonObject(data.endpoint, rawDir, "outbound");
-            webSite.addUserFileLink(outboundFilePath, `[${contextUtil.getProtocol()}] endpoint для кастомных конфигов hc-box`, "outbound", ["download", "copy-data"]);
-
-            let filePath = path.join(rawDir, `${files.getFileName()}.conf`);
-            fs.copyFileSync(userFileData.path, filePath);
-            webSite.addUserFileLink(filePath, `[${contextUtil.getProtocol()}] конфиг для AmneziaVPN или AmneziaWG`, "config", ["download", "copy-data"]);
-        });
-
-        contextUtil.withPlatform("android", () => {
-            let androidConfig = singBox.getAndroidTemplate();
-
-            androidConfig.endpoints.push(data.endpoint);
-
-            android.processAndroidConfig(androidConfig, tunInbound, socksInbound);
-        });
-
-        contextUtil.withPlatform("ios", () => {
-            let iosDir = contextUtil.getIosDir();
-            let filePath = path.join(iosDir, `${files.getFileName("awg")}.conf`)
-
-            fs.copyFileSync(userFileData.path, filePath);
-            webSite.addUserFileLink(filePath, `[${contextUtil.getProtocol()}] конфиг для AmneziaVPN или AmneziaWG`, "config", ["download", "copy-data"]);
-        });
-
-        contextUtil.withPlatform("windows", () => {
-            let winDir = contextUtil.getWinDir();
-
-            let awgLinkFile =  path.join(winDir, `${files.getFileName("awg")}.link`);
-
-            contextUtil.withUserData(contextUtil.getUser(), "common", () => {
-                winDir = contextUtil.getWinDir();
-            });
-
-            let linkData = throne.addAmneziaSubscription(winDir, data.parsed);
-            fs.writeFileSync(awgLinkFile, linkData.link);
-
-            webSite.addUserFileLink(awgLinkFile, `[${contextUtil.getProtocol()}] ссылка для Throne`, "link", ["download", "copy-data"]);
-
-            contextUtil.withUserData(contextUtil.getUser(), "common", () => {
-                webSite.addUserFileLink(linkData.filePath, `Подписка для Throne`, "subscription", ["copy-link"]);
-            });
-        });
-    });
-}
-
-export default { generateUserData };
+export default { source, toEndpoint };
