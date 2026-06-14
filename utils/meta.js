@@ -15,7 +15,7 @@ function fileHash(path) {
     });
 }
 
-async function refreshMeta(user, defaultTime = 1779808140) {
+async function refreshMeta(user) {
     const now = Math.floor(Date.now() / 1000);
 
     let commonConfig = config.getCommonConfig();
@@ -61,7 +61,7 @@ async function refreshMeta(user, defaultTime = 1779808140) {
                 if (fileMeta === undefined) {
                     fileMeta = {
                         hash,
-                        time: defaultTime
+                        time: now
                     }
 
                     data[relativePath] = fileMeta;

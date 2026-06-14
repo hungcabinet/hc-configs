@@ -52,7 +52,7 @@ export class GenerationContext {
     }
 
     displayProtocol() {
-        return this.profileId ?? this.protocol;
+        return this.protocol ?? this.profileId;
     }
 
     dir(platform = this.platform) {

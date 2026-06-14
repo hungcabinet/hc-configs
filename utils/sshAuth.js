@@ -11,7 +11,7 @@ async function updateRemoteUsers(webServerConfig) {
     }
 
     const sshAuth = webServerConfig.sshAuth;
-    if (!sshAuth || !sshAuth.enabled) {
+    if (!webServerConfig || !sshAuth.enabled) {
         return;
     }
 

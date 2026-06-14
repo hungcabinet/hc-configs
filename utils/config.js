@@ -150,7 +150,7 @@ function getRsyncConfig(){
         "enabled" : false
     }
 
-    let configData = data.rsync || {};
+    let configData = getWebServerConfig()?.rsync || {};
 
     return merge(result, configData);
 }
