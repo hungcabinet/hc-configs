@@ -29,7 +29,7 @@ function buildNaiveWindowsLink(ctx, data, quic) {
 function generateVless(ctx, file) {
     const protocolCtx = ctx.withProtocol('vless');
     const content = fs.readFileSync(file.path, 'utf-8');
-    const data = vlessParser.toOutbound(content, 'chrome');
+    const data = vlessParser.toOutbound(content);
 
     report.logValidation('vless', file.path, data);
 
