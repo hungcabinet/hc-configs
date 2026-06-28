@@ -7,14 +7,15 @@ import awgParser from './parsers/awg.js';
 import naiveproxyParser from './parsers/naiveproxy.js';
 import mieruParser from './parsers/mieru.js';
 
-function buildNaiveWindowsLink(ctx, data, quic) {
-    const linkUrl = new URL(`https://${data.parsed.sni}`);
+function buildNaiveWindowsLink(ctx, endpoint, data, quic) {
+    const linkUrl = new URL(`https://${endpoint}`);
 
     linkUrl.searchParams.set("uot", "1");
     if (quic) {
         linkUrl.searchParams.set("congestion_control", "bbr2");
     }
     linkUrl.searchParams.set("security", "tls");
+    linkUrl.searchParams.set("sni", data.parsed.sni);
 
     linkUrl.username = data.parsed.username;
     linkUrl.password = data.parsed.password;
@@ -22,8 +23,7 @@ function buildNaiveWindowsLink(ctx, data, quic) {
 
     return linkUrl.href
         .replace("https://", quic ? "naive+quic://" : "naive+https://")
-        .replace(`${data.parsed.sni}/?`, `${data.parsed.sni}:${data.parsed.port}?`)
-        .replace("security=tls", "security=tls&alpn");
+        .replace(`${endpoint}/?`, `${endpoint}:${data.parsed.port}?`)
 }
 
 function generateVless(ctx, file) {
@@ -104,7 +104,7 @@ function generateNaiveproxy(ctx, file) {
         platformPipeline.emitOutboundProtocol(protocolCtx, {
             tunExclude: [`${naiveConfig.ip}/32`],
             singbox: { type: 'outbound', value: data.outbound },
-            windows: { link: buildNaiveWindowsLink(protocolCtx, data, variant.quic) }
+            windows: { link: buildNaiveWindowsLink(protocolCtx, naiveConfig.ip, data, variant.quic) }
         }, file, {
             rawOutboundType: 'https-outbound'
         });
