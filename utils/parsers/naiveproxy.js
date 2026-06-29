@@ -65,7 +65,37 @@ function getUsers(configPath){
     return source.getUsers(configPath);
 }
 
-function toOutbound(configData, endpoint = undefined, userName = undefined, withQuic = false, tag = 'proxy', domainResolver = 'google'){
+function convertToSingBoxEntity(parsed, tag, domainResolver, withQuic) {
+    const singBoxEntity = {
+        type: "naive",
+        tag,
+        udp_over_tcp: {
+            enabled: true,
+            version: 2
+        },
+        server: parsed.endpoint,
+        server_port: parsed.port,
+        tls: {
+            server_name: parsed.sni,
+            enabled: true
+        },
+        username: parsed.username,
+        password: parsed.password
+    };
+
+    if (domainResolver) {
+        singBoxEntity.domain_resolver = domainResolver;
+    }
+
+    if (withQuic) {
+        singBoxEntity.quic = true;
+        singBoxEntity.quic_congestion_control = "bbr2";
+    }
+
+    return singBoxEntity;
+}
+
+function parseData(configData, endpoint = undefined, userName = undefined, withQuic = false, tag = 'proxy', domainResolver = 'google'){
     const warnings = [];
     const errors = [];
 
@@ -86,45 +116,21 @@ function toOutbound(configData, endpoint = undefined, userName = undefined, with
         return { success: false, errors, warnings };
     }
 
-    let outbound = {
-        type: "naive",
-        tag: tag,
-        udp_over_tcp: {
-            enabled: true,
-            version: 2
-        },
-        server: endpoint,
-        server_port: parseInt(userRoute.port),
-        tls: {
-            server_name: sni,
-            enabled: true
-        },
+    const parsed = {
         username: userRoute.route.auth_user_deprecated,
-        password: userRoute.route.auth_pass_deprecated
+        password: userRoute.route.auth_pass_deprecated,
+        endpoint,
+        sni,
+        port: parseInt(userRoute.port)
     };
-
-    if (domainResolver) {
-        outbound.domain_resolver = domainResolver;
-    }
-
-    if (withQuic) {
-        outbound.quic = true;
-        outbound.quic_congestion_control = "bbr2";
-    }
 
     return {
         success: true,
-        outbound,
+        singBoxEntity: convertToSingBoxEntity(parsed, tag, domainResolver, withQuic),
         warnings,
-        errors,
-        parsed:{
-            username: userRoute.route.auth_user_deprecated,
-            password: userRoute.route.auth_pass_deprecated,
-            endpoint,
-            sni,
-            port: parseInt(userRoute.port)
-        }
+        errors: [],
+        parsed
     };
 }
 
-export default { source, getUsers, toOutbound, getForwardProxyRoutes, getSni };
+export default { source, getUsers, parseData, getForwardProxyRoutes, getSni };

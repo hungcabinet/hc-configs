@@ -29,11 +29,11 @@ function buildNaiveWindowsLink(ctx, endpoint, data, quic) {
 function generateVless(ctx, file) {
     const protocolCtx = ctx.withProtocol('vless');
     const content = fs.readFileSync(file.path, 'utf-8');
-    const data = vlessParser.toOutbound(content);
+    const data = vlessParser.parseData(content);
 
     report.logValidation('vless', file.path, data);
 
-    if (!data.success) {
+    if (!data.success || !data.singBoxEntity) {
         report.recordSkipped();
         return;
     }
@@ -45,7 +45,7 @@ function generateVless(ctx, file) {
 
     platformPipeline.emitOutboundProtocol(protocolCtx, {
         tunExclude: [`${data.parsed.address}/32`],
-        singbox: { type: 'outbound', value: data.outbound },
+        singbox: { type: 'outbound', value: data.singBoxEntity },
         windows: { link: throneLink }
     }, file, {
         rawExtras: [{
@@ -60,11 +60,11 @@ function generateVless(ctx, file) {
 
 function generateAwg(ctx, file) {
     const protocolCtx = ctx.withProtocol('awg');
-    const data = awgParser.toEndpoint(fs.readFileSync(file.path, 'utf-8'));
+    const data = awgParser.parseData(fs.readFileSync(file.path, 'utf-8'));
 
     report.logValidation('awg', file.path, data);
 
-    if (!data.success) {
+    if (!data.success || !data.singBoxEntity) {
         report.recordSkipped();
         return;
     }
@@ -73,7 +73,7 @@ function generateAwg(ctx, file) {
 
     platformPipeline.emitAwgProtocol(protocolCtx, {
         tunExclude: data.parsed.peers.map(value => `${value.endpointHost}/32`),
-        singbox: { type: 'endpoint', value: data.endpoint },
+        singbox: { type: 'endpoint', value: data.singBoxEntity },
         parsed: data.parsed
     }, file);
 }
@@ -90,11 +90,11 @@ function generateNaiveproxy(ctx, file) {
 
     for (const variant of variants) {
         const protocolCtx = ctx.withProtocol(variant.name);
-        const data = naiveproxyParser.toOutbound(configData, naiveConfig.ip, ctx.user, variant.quic);
+        const data = naiveproxyParser.parseData(configData, naiveConfig.ip, ctx.user, variant.quic);
 
         report.logValidation(variant.name, file.path, data);
 
-        if (!data.success) {
+        if (!data.success || !data.singBoxEntity) {
             report.recordSkipped();
             continue;
         }
@@ -103,7 +103,7 @@ function generateNaiveproxy(ctx, file) {
 
         platformPipeline.emitOutboundProtocol(protocolCtx, {
             tunExclude: [`${naiveConfig.ip}/32`],
-            singbox: { type: 'outbound', value: data.outbound },
+            singbox: { type: 'outbound', value: data.singBoxEntity },
             windows: { link: buildNaiveWindowsLink(protocolCtx, naiveConfig.ip, data, variant.quic) }
         }, file, {
             rawOutboundType: 'https-outbound'
@@ -120,11 +120,11 @@ function generateMieru(ctx, file) {
     const protocolCtx = ctx.withProtocol('mieru');
     const configData = mieruParser.readConfig(file.path);
     const mieruConfig = config.getVpnServerConfig(ctx.server).mieru || {};
-    const data = mieruParser.toOutbound(configData, mieruConfig.ip, ctx.user);
+    const data = mieruParser.parseData(configData, mieruConfig.ip, ctx.user);
 
     report.logValidation('mieru', file.path, data);
 
-    if (!data.success) {
+    if (!data.success || !data.singBoxEntity) {
         report.recordSkipped();
         return;
     }
@@ -133,7 +133,7 @@ function generateMieru(ctx, file) {
 
     platformPipeline.emitAndroidRawOutboundProtocol(protocolCtx, {
         tunExclude: data.parsed?.tunExclude || [],
-        singbox: { type: 'outbound', value: data.outbound }
+        singbox: { type: 'outbound', value: data.singBoxEntity }
     }, file, {
         rawOutboundLabel: `[${protocolCtx.displayProtocol()}] outbound для кастомных конфигов hc-box или sing-box`
     });

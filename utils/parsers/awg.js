@@ -3,7 +3,50 @@ const source = {
     pattern: /^awg.*\.conf$/i,
 };
 
-function toEndpoint(configString, tag = 'proxy', domainResolver = 'google') {
+function convertToSingBoxEntity(parsed, tag, domainResolver) {
+    const { interface: iface, peers } = parsed;
+    const awgParams = iface.awg;
+
+    return {
+        address: iface.address,
+        private_key: iface.privateKey,
+        tag,
+        mtu: iface.mtu,
+        type: "awg",
+        domain_resolver: domainResolver,
+
+        jc: awgParams.Jc,
+        jmin: awgParams.Jmin,
+        jmax: awgParams.Jmax,
+
+        h1: awgParams.H1,
+        h2: awgParams.H2,
+        h3: awgParams.H3,
+        h4: awgParams.H4,
+
+        s1: awgParams.S1,
+        s2: awgParams.S2,
+        s3: awgParams.S3,
+        s4: awgParams.S4,
+
+        i1: awgParams.I1,
+        i2: awgParams.I2,
+        i3: awgParams.I3,
+        i4: awgParams.I4,
+        i5: awgParams.I5,
+
+        peers: peers.map((peer) => ({
+            address: peer.endpointHost,
+            port: peer.endpointPort,
+            allowed_ips: peer.allowedIPsList,
+            persistent_keepalive_interval: parseInt(peer.PersistentKeepalive),
+            preshared_key: peer.PresharedKey,
+            public_key: peer.PublicKey,
+        }))
+    };
+}
+
+function parseData(configString, tag = 'proxy', domainResolver = 'google') {
     const warnings = [];
     const errors = [];
 
@@ -276,59 +319,7 @@ function toEndpoint(configString, tag = 'proxy', domainResolver = 'google') {
             );
         }
 
-        // =========================
-        // Собираем endpoint
-        // =========================
-
-        let endpoint = {
-            address: addressList,
-            private_key: privateKey,
-            tag: tag,
-            mtu:
-                interfaceSection.MTU
-                    ? parseInt(interfaceSection.MTU)
-                    : undefined,
-            type: "awg",
-            domain_resolver: domainResolver,
-
-            jc: awgParams.Jc,
-            jmin: awgParams.Jmin,
-            jmax: awgParams.Jmax,
-
-            h1: awgParams.H1,
-            h2: awgParams.H2,
-            h3: awgParams.H3,
-            h4: awgParams.H4,
-
-            s1: awgParams.S1,
-            s2: awgParams.S2,
-            s3: awgParams.S3,
-            s4: awgParams.S4,
-
-            i1: awgParams.I1,
-            i2: awgParams.I2,
-            i3: awgParams.I3,
-            i4: awgParams.I4,
-            i5: awgParams.I5,
-
-            peers: peers.map((peer) => {
-                return {
-                    address: peer.endpointHost,
-                    port: peer.endpointPort,
-                    allowed_ips: peer.allowedIPsList,
-                    persistent_keepalive_interval: parseInt(peer.PersistentKeepalive),
-                    preshared_key: peer.PresharedKey,
-                    public_key: peer.PublicKey,
-                }
-            })
-        }
-
-        // =========================
-        // Итоговый parsed
-        // =========================
-
         const parsed = {
-
             interface: {
                 privateKey,
                 address: addressList,
@@ -347,9 +338,11 @@ function toEndpoint(configString, tag = 'proxy', domainResolver = 'google') {
             peers
         };
 
+        const parseSucceeded = errors.length === 0;
+
         return {
-            success: errors.length === 0,
-            endpoint: endpoint,
+            success: parseSucceeded,
+            singBoxEntity: parseSucceeded ? convertToSingBoxEntity(parsed, tag, domainResolver) : undefined,
             warnings,
             errors,
             parsed
@@ -372,4 +365,4 @@ function toEndpoint(configString, tag = 'proxy', domainResolver = 'google') {
     }
 }
 
-export default { source, toEndpoint };
+export default { source, parseData };
