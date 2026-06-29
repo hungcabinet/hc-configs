@@ -4,6 +4,7 @@ import config from "./config.js";
 import files from "./files.js";
 import path from "path";
 import meta from "./meta.js";
+import urlAuth from "./urlAuth.js";
 
 let webServerData = {
     users: {}
@@ -141,28 +142,28 @@ function addUserSimpleLink(ctx, link, text, linkType = "common", attributes= ["o
         return;
     }
 
-    let url = new URL(link);
-
     let webUser = webConfig.users.find(s => s.userName === ctx.user);
-    if (webUser !== undefined){
-        url.username = webUser.userName;
-        url.password = webUser.password;
-    }
+    let href = urlAuth.embedBasicAuthInLink(
+        link,
+        webConfig.baseUrl,
+        webUser?.userName,
+        webUser?.password
+    );
 
     let serverData = getServerData(ctx.user, ctx.platform, ctx.server);
 
-    if (!serverData.links.some(v => v.href === url.href && v.text === text && v.linkType === linkType)){
+    if (!serverData.links.some(v => v.href === href && v.text === text && v.linkType === linkType)){
         serverData.links.push({
-            href: url.href,
+            href: href,
             download: downloadLink,
             text: text,
             linkType: linkType,
             attributes: attributes,
-            path: url.pathname,
+            path: new URL(href).pathname,
         });
     }
 
-    return url.href;
+    return href;
 }
 
 function addSpecificLink(ctx, link, text, linkType = "common"){

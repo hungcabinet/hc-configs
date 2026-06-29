@@ -155,13 +155,24 @@ cp defaultConfigs/config.json.sample configs/config.json
   - ключи: `enabled`, `host`, `destination`, `user`.
 - `webServer`
   - включает генерацию ссылок с публичным `baseUrl`.
-  - `users`: список пользователей для встраивания basic-auth в ссылки.
+  - `users`: список пользователей для встраивания basic-auth в ссылки (файлы на сайте, subscription URL, **внутренние URL ruleset** в sing-box и Throne).
   - `sshAuth`: автоматическое создание/обновление пользователей в удалённом `.htpasswd` через SSH.
     - `enabled`: включить/выключить.
     - `host`: SSH-хост для подключения.
     - `user`: SSH-пользователь для подключения.
     - `htpasswdPath`: путь к файлу паролей на удалённом сервере.
-    - **Важно**: Первый пользователь должен быть создан вручную с флагом `-c` (см. раздел 3, шаг 2).
+    - **Важно**: Первый пользователь должен быть создан вручную с флагом `-c` (см. раздел 4, шаг 2).
+
+### Override sing-box конфигов
+
+Файлы из `defaultConfigs/` можно переопределить, положив копию в `configs/` (полная замена файла):
+
+| Файл | Назначение |
+|------|------------|
+| `routing.sing-box.json` | DNS, приложения, remote ruleset lists |
+| `template.sing-box.json` | Базовый каркас sing-box (log, outbounds, experimental) |
+| `inbound.socks.sing-box.json` | SOCKS inbound |
+| `inbound.tun.sing-box.json` | TUN inbound |
 
 ### Шаг 4. Подготовить входные данные
 
@@ -246,7 +257,71 @@ crontab -e
 
 ---
 
-## 3) Базовая инструкция по настройке своего сервера с сайтом
+## 3) Маршрутизация sing-box и Throne
+
+Маршрутизация **не зашита** в монолитный JSON. Данные в `defaultConfigs/routing.sing-box.json` (или `configs/routing.sing-box.json`) собираются в runtime модулем `utils/routingData.js`.
+
+### Структура `routing.sing-box.json`
+
+```json
+{
+  "dns": {
+    "directServer": "yandex",
+    "defaultServer": "google",
+    "servers": [ "..." ]
+  },
+  "apps": {
+    "direct": [ "com.vkontakte.android" ],
+    "proxy": []
+  },
+  "rulesetDownload": {
+    "default": "direct",
+    "proxy": []
+  },
+  "lists": {
+    "direct": {
+      "cidrs": [ "https://example.com/routing/direct.srs" ],
+      "domains": [ "https://example.com/routing/apple.srs" ]
+    },
+    "proxy": {
+      "domains": [ "https://example.com/routing/youtube.srs" ]
+    }
+  }
+}
+```
+
+- **lists** — remote `.srs` URL, сгруппированные по `direct`/`proxy` и `cidrs`/`domains`. Пустые группы можно не указывать.
+- **apps** — Android package names; `direct` и `proxy` маршрутизируются отдельно (iOS-конфиги rules с `package_name` не получают).
+- **rulesetDownload** — через какой outbound sing-box **скачивает** ruleset (`download_detour`). По умолчанию `direct`; исключения — URL в массиве `proxy` (должны быть и в `lists`).
+- **dns** — резолверы и правила: direct-трафик → `directServer`, остальное → `defaultServer`.
+
+### Именование ruleset
+
+Тег вычисляется автоматически: `{source}-{basename}-{type}`
+
+- `https://…/routing/hydraponique/geosite/youtube.srs` → `hydraponique-youtube-domains`
+- `https://…/routing/hungcabinet/sing-box/cidrs/asn/v4/AS13335.srs` → `hungcabinet-AS13335-cidrs`
+
+### Порядок route rules
+
+1. apps → direct  
+2. direct cidrs → direct  
+3. direct domains → direct  
+4. apps → proxy  
+5. proxy cidrs → proxy  
+6. proxy domains → proxy  
+
+### Throne (Windows)
+
+`direct-rules.txt` и `proxy-rules.txt` строятся из тех же `lists` (строки `ruleset:<url>`). Приложения в Throne rules не попадают.
+
+### Basic-auth во внутренних ruleset URL
+
+Если URL ruleset имеет тот же origin, что `webServer.baseUrl`, при генерации для каждого пользователя в URL встраивается basic-auth (логин/пароль из `webServer.users`). В конфиге URL хранятся **без** credentials. Внешние URL (другой origin) не меняются.
+
+---
+
+## 4) Базовая инструкция по настройке своего сервера с сайтом
 
 В репозитории есть пример: `defaultConfigs/nginx.conf.sample`.
 
@@ -332,6 +407,7 @@ sudo systemctl reload nginx
 1. `npm install`
 2. `cp defaultConfigs/config.json.sample configs/config.json`
 3. Заполнить `configs/config.json` (`webServer`, `vpnServers`, `rsync`)
-4. Положить входные файлы в `data/src/...`
-5. `node index.js`
-6. Проверить `data/dst` и публикацию через Nginx
+4. При необходимости: `cp defaultConfigs/routing.sing-box.json configs/routing.sing-box.json` и настроить lists
+5. Положить входные файлы в `data/src/...`
+6. `node index.js`
+7. Проверить `data/dst` и публикацию через Nginx

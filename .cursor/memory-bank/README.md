@@ -26,5 +26,18 @@
 - Обработчики протоколов: `utils/protocolHandlers.js`
 - Парсеры: `utils/parsers/*.js`
 - Платформенный вывод: `utils/platformPipeline.js`
+- sing-box шаблон и inbounds: `utils/singBox.js`
+- Маршрутизация sing-box / Throne rules: `utils/routingData.js`
+- Basic-auth во внутренних URL: `utils/urlAuth.js`
 - Веб-портал: `utils/webSite.js`
 - Отчётность/валидация: `utils/report.js`
+
+## Override конфигов sing-box
+
+Файлы из `defaultConfigs/` можно переопределить через `configs/` (тот же относительный путь):
+
+- `routing.sing-box.json` — списки маршрутизации, DNS, приложения
+- `template.sing-box.json` — базовый каркас sing-box (log, outbounds, route.final)
+- `inbound.socks.sing-box.json`, `inbound.tun.sing-box.json` — inbounds
+
+Подробности формата — в `conventions.md` и `readme.md`.

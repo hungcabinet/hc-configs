@@ -1,105 +1,11 @@
-﻿import singBox from "./singBox.js";
-import fs from "fs";
+﻿import fs from "fs";
 import path from "path";
 import base64url from "base64url";
+import routingData from "./routingData.js";
 
-function extractWindowsRoutes(){
-    function sortList(list){
-        const order = {
-            "ip:": 0,
-            "domain:": 1,
-            "ruleset:": 2,
-        };
-
-        list.sort((a, b) => {
-            const getPriority = (str) => {
-                const prefix = Object.keys(order).find(p => str.startsWith(p));
-                return prefix !== undefined ? order[prefix] : 999;
-            };
-
-            return getPriority(a) - getPriority(b);
-        });
-    }
-
-    let proxyRoutes = [];
-    let directRoutes = [];
-
-    let source = singBox.getAndroidTemplate();
-
-    let routeRules = source.route?.rules;
-    let rulesets = source.route?.rule_set;
-
-    if (routeRules !== undefined){
-        for (const rule of routeRules) {
-            if (!("outbound" in rule)){
-                continue;
-            }
-
-            if (rule.action !== "route"){
-                continue;
-            }
-
-            let target = undefined;
-
-            switch (rule.outbound) {
-                case "proxy":
-                    target = proxyRoutes;
-                    break;
-                case "direct":
-                    target = directRoutes;
-                    break;
-                default:
-                    continue;
-            }
-
-            for (const key in rule) {
-                switch (key){
-                    case "rule_set":
-                    {
-                        if (rulesets === undefined) {
-                            break;
-                        }
-
-                        let ruleSetTags = rule[key];
-
-                        for (let ruleSetTag of ruleSetTags) {
-                            let rulesetUrl = rulesets.find(ruleset => ruleset.tag === ruleSetTag)?.url;
-
-                            if (rulesetUrl !== undefined) {
-                                target.push(`ruleset:${rulesetUrl}`);
-                            }
-                        }
-                    }
-                        break;
-                    case "domain":
-                    {
-                        let domains = rule[key];
-
-                        for (const domain of domains) {
-                            target.push(`domain:${domain}`);
-                        }
-                    }
-                        break;
-                    case "ip_cidr":
-                    {
-                        let ipCidrs = rule[key];
-
-                        for (const ipCidr of ipCidrs) {
-                            target.push(`ip:${ipCidr}`);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    sortList(proxyRoutes);
-    sortList(directRoutes);
-
-    return {
-        "proxy": proxyRoutes,
-        "direct": directRoutes
-    }
+function extractWindowsRoutes(ctx){
+    const authOptions = routingData.getAuthOptionsForUser(ctx?.user);
+    return routingData.buildThroneRoutes(routingData.loadRoutingData(), authOptions);
 }
 
 function addLinkToSubscription(targetDir, data){

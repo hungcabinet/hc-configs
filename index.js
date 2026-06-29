@@ -54,7 +54,7 @@ async function mainProcess(){
             "telegram"
         );
 
-        let windowsRules = throne.extractWindowsRoutes();
+        let windowsRules = throne.extractWindowsRoutes(commonCtx);
         const windowsCtx = commonCtx.withPlatform("windows");
 
         let directRulesPath = path.join(commonServerDest, "windows", "direct-rules.txt");

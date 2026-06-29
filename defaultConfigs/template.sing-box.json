@@ -1,0 +1,29 @@
+{
+  "log": {
+    "level": "error",
+    "timestamp": true
+  },
+  "inbounds": [],
+  "endpoints": [],
+  "outbounds": [
+    {
+      "type": "direct",
+      "tag": "direct",
+      "domain_resolver": "yandex"
+    },
+    {
+      "type": "block",
+      "tag": "block"
+    }
+  ],
+  "route": {
+    "auto_detect_interface": true,
+    "default_domain_resolver": "yandex",
+    "final": "proxy"
+  },
+  "experimental": {
+    "cache_file": {
+      "enabled": true
+    }
+  }
+}

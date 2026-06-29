@@ -46,8 +46,23 @@ node index.js
 
 - Пользовательский конфиг: `configs/config.json` (обязателен).
 - Шаблоны/статические файлы: `defaultConfigs/*`, с override через `configs/*` (`utils/config.js:getConfigPath`).
-- Ключевые секции: `files`, `socks`, `vpnServers.default`, `vpnServers.servers`, `webServer`, `rsync`.
+- Ключевые секции `config.json`: `files`, `socks`, `vpnServers.default`, `vpnServers.servers`, `webServer`, `rsync`.
+- Sing-box маршрутизация: `defaultConfigs/routing.sing-box.json` (override: `configs/routing.sing-box.json`).
+- Sing-box базовый шаблон: `template.sing-box.json`, inbounds: `inbound.*.sing-box.json`.
 - Для `mieru` endpoint берётся из `vpnServers.*.mieru.ip`; если IP не задан, используется `listen` из `listeners[type=mieru]` входного yaml.
+
+## Маршрутизация sing-box
+
+Данные в `routing.sing-box.json` собираются в runtime через `utils/routingData.js`:
+
+- **dns** — серверы и теги `directServer` / `defaultServer`
+- **apps** — `{ direct: [...], proxy: [...] }` (Android package names)
+- **lists** — grouped remote `.srs` URL: `direct|proxy` → `cidrs|domains` → массив URL
+- **rulesetDownload** — `{ default: "direct", proxy: [urls] }` для `download_detour` при скачивании ruleset (исключения должны быть в `lists`)
+
+Throne `direct-rules.txt` / `proxy-rules.txt` строятся из тех же данных. Внутренние URL (origin = `webServer.baseUrl`) получают basic-auth per-user.
+
+Подробный формат — `conventions.md` и раздел 4 в `readme.md`.
 
 ## Деплой
 

@@ -36,7 +36,7 @@ function emitRawOutbound(ctx, parsed, options) {
 
 function emitAndroidOutbound(ctx, parsed, tunInbound, socksInbound) {
     const androidCtx = ctx.withPlatform('android');
-    const androidConfig = singBox.getAndroidTemplate();
+    const androidConfig = singBox.getAndroidTemplate(ctx);
 
     if (parsed.singbox.type === 'outbound') {
         androidConfig.outbounds.push(merge({}, parsed.singbox.value));
@@ -49,7 +49,7 @@ function emitAndroidOutbound(ctx, parsed, tunInbound, socksInbound) {
 
 function emitIosSingboxOutbound(ctx, parsed, tunInbound) {
     const iosCtx = ctx.withPlatform('ios');
-    const iosConfig = singBox.getIosTemplate();
+    const iosConfig = singBox.getIosTemplate(ctx);
     const outbound = merge({}, parsed.singbox.value);
 
     if (outbound?.tls?.utls?.fingerprint !== undefined) {

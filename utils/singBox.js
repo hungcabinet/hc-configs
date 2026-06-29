@@ -1,9 +1,13 @@
 ﻿import config from "./config.js";
 import merge from "deepmerge";
+import routingData from "./routingData.js";
 
-const singBoxTemplate = config.getConfigContent("singBoxTemplate.json");
-const socksInboundTemplate = config.getConfigContent("socksInboundTemplate.json");
-const tunInboundTemplate = config.getConfigContent("tunInboundTemplate.json");
+const SING_BOX_TEMPLATE_FILE = 'template.sing-box.json';
+const SOCKS_INBOUND_TEMPLATE_FILE = 'inbound.socks.sing-box.json';
+const TUN_INBOUND_TEMPLATE_FILE = 'inbound.tun.sing-box.json';
+const singBoxTemplate = config.getConfigContent(SING_BOX_TEMPLATE_FILE);
+const socksInboundTemplate = config.getConfigContent(SOCKS_INBOUND_TEMPLATE_FILE);
+const tunInboundTemplate = config.getConfigContent(TUN_INBOUND_TEMPLATE_FILE);
 
 function getSocksInbound(){
     let inbound = JSON.parse(socksInboundTemplate);
@@ -45,16 +49,20 @@ function getTunInbound(endpointHosts){
     return result
 }
 
-function getAndroidTemplate(){
+function getAndroidTemplate(ctx){
+    const base = JSON.parse(singBoxTemplate);
+    const authOptions = routingData.getAuthOptionsForUser(ctx?.user);
+    const routing = routingData.buildSingBoxRouting(routingData.loadRoutingData(), authOptions);
+
     return merge({
         outbounds: [],
         inbounds: [],
         endpoints: []
-    },JSON.parse(singBoxTemplate));
+    }, merge(base, routing));
 }
 
-function getIosTemplate(){
-    let result = getAndroidTemplate();
+function getIosTemplate(ctx){
+    let result = getAndroidTemplate(ctx);
 
     let dnsRules = result.dns?.rules;
 
