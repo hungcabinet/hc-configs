@@ -78,9 +78,9 @@ function getPlatformName(platform){
         case "android":
             return "Android (hc-box)";
         case "android-clash":
-            return "Android (Clash Mi)";
+            return "Android (Clash Mi) - EXPERIMENTAL!!!";
         case "ios":
-            return "iOS";
+            return "iOS - EXPERIMENTAL!!!";
         case "windows":
             return "Windows";
         case "telegram":
