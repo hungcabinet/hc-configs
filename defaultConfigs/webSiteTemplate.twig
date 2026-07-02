@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
-    <link rel="stylesheet" href="{{ baseUrl }}/site/site.css"/>
+    <link rel="stylesheet" href="{{ siteCssPath }}"/>
 
     <title>Hungarian Cabinet</title>
 
@@ -15,10 +15,19 @@
 <div class="topbar">
     <h1>Полезные ссылки</h1>
 
-    <button class="theme-btn" onclick="toggleTheme()">
-        <i class="fa-solid fa-sun sun dark-theme"></i>
-        <i class="fa-solid fa-moon moon light-theme"></i>
-    </button>
+    <div class="topbar-controls">
+        <select id="platform-select" class="platform-select" aria-label="Платформа">
+            <option value="all" selected>Все</option>
+            {% for platform in user.platforms %}
+            <option value="{{ platform.id }}">{{ platform.name }}</option>
+            {% endfor %}
+        </select>
+
+        <button class="theme-btn" onclick="toggleTheme()">
+            <i class="fa-solid fa-sun sun dark-theme"></i>
+            <i class="fa-solid fa-moon moon light-theme"></i>
+        </button>
+    </div>
 </div>
 
 <div>
@@ -28,7 +37,7 @@
 
 
 {% for platform in user.platforms %}
-<div class="platform">
+<div class="platform" data-platform-id="{{ platform.id }}">
     <h2>{{platform.name}}</h2>
 
     {% for server in platform.servers %}
@@ -69,7 +78,7 @@
 </div>
 {% endfor %}
 
-<script src="{{ baseUrl }}/site/site.js"></script>
+<script src="{{ siteJsPath }}"></script>
 
 </body>
 </html>

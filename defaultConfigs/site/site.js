@@ -30,6 +30,18 @@ function toggleTheme() {
     applyTheme(newTheme);
     setCookie('theme', newTheme);
 }
+
+function applyPlatformFilter(platformId) {
+    document.querySelectorAll('.platform').forEach(el => {
+        const isVisible = platformId === 'all' || el.dataset.platformId === platformId;
+        el.classList.toggle('hidden', !isVisible);
+    });
+}
+
+function setPlatformFilter(platformId) {
+    applyPlatformFilter(platformId);
+    setCookie('platform', platformId);
+}
 function formatRelativeTime(timestamp) {
     const now = Math.floor(Date.now() / 1000);
     const diff = now - timestamp;
@@ -69,6 +81,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const savedTheme = getCookie('theme') || 'dark';
 
     applyTheme(savedTheme);
+
+    const platformSelect = document.getElementById('platform-select');
+
+    if (platformSelect) {
+        const savedPlatform = getCookie('platform') || 'all';
+        const hasOption = [...platformSelect.options].some(o => o.value === savedPlatform);
+
+        platformSelect.value = hasOption ? savedPlatform : 'all';
+        applyPlatformFilter(platformSelect.value);
+
+        platformSelect.addEventListener('change', () => {
+            setPlatformFilter(platformSelect.value);
+        });
+    }
 
     document.querySelectorAll('.copy-link').forEach(el => el.addEventListener('click', async function() {
         const link = this.dataset.link;

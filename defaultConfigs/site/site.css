@@ -43,6 +43,34 @@ body {
     margin-bottom: 8px;
 }
 
+.topbar-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.platform-select {
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    padding: 10px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    max-width: 220px;
+    transition: 0.2s ease;
+}
+
+.platform-select:focus {
+    outline: 2px solid var(--link);
+    outline-offset: 2px;
+}
+
+.platform.hidden {
+    display: none;
+}
+
 .theme-btn {
     border: 1px solid var(--border);
     background: var(--card);
@@ -153,6 +181,21 @@ div.updated-at {
 @media (max-width: 768px) {
     body {
         padding: 16px;
+    }
+
+    .topbar {
+        flex-wrap: wrap;
+    }
+
+    .topbar-controls {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .platform-select {
+        flex: 1;
+        max-width: none;
+        min-width: 0;
     }
 
     .platform {

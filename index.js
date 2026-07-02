@@ -12,7 +12,13 @@ import protocolRegistry from "./utils/protocolRegistry.js";
 import report from "./utils/report.js";
 import mihomoProxies from "./utils/mihomoProxies.js";
 
+const devRun = process.argv.includes('--dev-run');
+
 async function mainProcess(){
+    if (devRun) {
+        webServer.setDevRun(true);
+    }
+
     report.reset();
     mihomoProxies.reset();
 

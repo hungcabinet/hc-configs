@@ -9,7 +9,12 @@ import urlAuth from "./urlAuth.js";
 let webServerData = {
     users: {}
 }
+let devRun = false;
 const webConfig = config.getWebServerConfig();
+
+function setDevRun(value) {
+    devRun = value;
+}
 
 const linkTypePriority = [
     'telegram',
@@ -231,8 +236,24 @@ async function renderUserIndex(user){
 
     let metaData = await meta.refreshMeta(user);
 
+    const siteDir = path.join(commonConfig.destinationDirectoryPath, "site");
+    const htmlDir = path.dirname(htmlPath);
+
+    let siteCssPath;
+    let siteJsPath;
+
+    if (devRun) {
+        siteCssPath = path.relative(htmlDir, path.join(siteDir, "site.css")).replace(/\\/g, '/');
+        siteJsPath = path.relative(htmlDir, path.join(siteDir, "site.js")).replace(/\\/g, '/');
+    } else {
+        siteCssPath = `${webConfig.baseUrl}/site/site.css`;
+        siteJsPath = `${webConfig.baseUrl}/site/site.js`;
+    }
+
     const html = await renderTemplate(config.getConfigPath("webSiteTemplate.twig"), {
         baseUrl: webConfig.baseUrl,
+        siteCssPath,
+        siteJsPath,
         user: getUserData(user),
         meta: metaData
     });
@@ -266,4 +287,4 @@ function writeWebFiles(){
     fs.copyFileSync(adminsManualSourcePath, adminsManualPath);
 }
 
-export default { startCollectData, addUserFileLink, renderUserIndex, addSpecificLink, writeWebFiles};
+export default { startCollectData, addUserFileLink, renderUserIndex, addSpecificLink, writeWebFiles, setDevRun};
