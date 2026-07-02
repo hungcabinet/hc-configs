@@ -1,0 +1,29 @@
+﻿mixed-port: 7890
+allow-lan: true
+mode: rule
+log-level: info
+
+tun:
+  enable: true
+  stack: mixed
+  device: tun0
+  auto-route: true
+  auto-detect-interface: true
+
+proxies: []
+
+proxy-groups:
+  - name: PROXY
+    type: fallback
+    proxies: []
+    url: 'https://www.gstatic.com/generate_204'
+    max-failed-times: 2
+    timeout: 2500
+    interval: 120
+
+rules:
+  - MATCH, PROXY
+
+profile:
+  store-selected: true
+  store-fake-ip: true

@@ -5,24 +5,28 @@
 ```
 utils/
   generationContext.js   # Immutable контекст user/server/protocol/platform/profileId
-  protocolRegistry.js    # Реестр обработчиков и source layout
-  protocolHandlers.js    # Логика generate* по протоколам
+  protocolRegistry.js    # Реестр обработчиков, plan() и inline generate()
   parsers/
-    vless.js             # VLESS -> sing-box outbound + валидация
-    awg.js               # AWG conf -> sing-box endpoint + валидация
+    vless.js             # VLESS -> sing-box outbound + mihomo proxy + валидация
+    awg.js               # AWG conf -> sing-box endpoint + mihomo wireguard + валидация
     naiveproxy.js        # Caddy JSON -> naive outbound + users extractor
-    mieru.js             # Mihomo/Mieru YAML -> mieru outbound + users extractor
-  platformPipeline.js    # Единый эмиттер артефактов на android/ios/windows/raw/telegram
-  singBox.js             # Сборка sing-box: base + routing + inbounds
-  routingData.js         # Данные маршрутизации, сборка route/dns для sing-box и Throne
-  urlAuth.js             # Basic-auth во внутренних HTTP(S) ссылках
-  throne.js              # Throne subscriptions + Windows routing rules
+    mieru.js             # Mihomo/Mieru YAML -> mieru outbound + mihomo proxy + users extractor
+  platformPipeline.js    # Единый эмиттер артефактов на платформы
+  singBox.js             # template.sing-box.json + inbounds + sing-box:// subscription
+  mihomo.js              # template.mihomo.yaml + rule-provider auth + clash:// subscription
+  android.js             # Android sing-box: tun / hybrid / socks
+  androidClash.js        # Android Clash + iOS mihomo: только TUN yaml
+  mihomoProxies.js       # Сбор raw proxy yaml + all-proxies.yaml per server
+  urlAuth.js             # Basic-auth: URL enrichment (sing-box/Throne) и header (mihomo)
+  throne.js              # Throne subscriptions + чтение throne.*.txt с auth enrichment
   sourceProfile.js       # profileId из имени файла источника
   report.js              # централизованный warn/error/summary
 
 defaultConfigs/
   template.sing-box.json
-  routing.sing-box.json
+  template.mihomo.yaml
+  throne.direct.txt
+  throne.proxy.txt
   inbound.socks.sing-box.json
   inbound.tun.sing-box.json
   config.json.sample
@@ -30,72 +34,65 @@ defaultConfigs/
   ...
 ```
 
-Удалены старые файлы: `utils/context.js`, `utils/vless.js`, `utils/awg.js`, `utils/naiveproxy.js`, монолитный `singBoxTemplate.json`.
+Удалены старые файлы: `utils/context.js`, `utils/vless.js`, `utils/awg.js`, `utils/naiveproxy.js`, `utils/protocolHandlers.js`, `utils/routingData.js`, монолитный `singBoxTemplate.json`.
 
 ## Runtime-пайплайн
 
-1. `index.js:mainProcess()` сбрасывает `report`.
+1. `index.js:mainProcess()` сбрасывает `report` и `mihomoProxies`.
 2. `files.getUserFiles(commonConfig)` сканирует `data/src`:
    - `per-user` берётся из `{server}/{user}/...`
-   - `server-shared` (например naiveproxy/mieru) разворачивается на всех пользователей, найденных парсером.
-3. Для каждого пользователя сначала очищаются `common/windows/android/ios/raw` директории.
+   - `server-shared` (naiveproxy/mieru) разворачивается на всех пользователей, найденных парсером.
+3. Для каждого пользователя сначала очищаются `common/windows/android/android-clash/ios/raw` директории.
 4. Для каждого файла:
    - ищется handler в `protocolRegistry.findHandler(file.name)`;
    - строится `ctx.withProfile(handler.getProfileId(file.name))`;
-   - вызывается `handler.generate(ctx, file)`.
-5. После протоколов по каждому пользователю:
+   - вызывается `handler.generate(ctx, file)` → `platformPipeline.run(...)`.
+5. После протоколов по каждому серверу/пользователю:
+   - `mihomoProxies.flushAll()` пишет агрегированный `*-all-proxies.yaml` в `raw`;
    - добавляется `tg://socks` ссылка в `common/android`;
-   - строятся `direct-rules.txt` и `proxy-rules.txt` в `common/windows` (из `routing.sing-box.json`, per-user auth);
+   - строятся `direct-rules.txt` и `proxy-rules.txt` в `common/windows` (из `throne.*.txt`, per-user auth);
    - рендерится `users/{user}/index.html`.
-6. Копируются `site/*` и `docs/for-users.pdf`.
+6. Копируются `site/*` и `docs/for-users.pdf`, `docs/for-admins.pdf`.
 7. При включённом `rsync` выполняется синхронизация.
 8. Печатается итоговый отчёт; при ошибках парсинга — `exit(1)`.
 
-## Sing-box: сборка конфига
+## Sing-box: сборка конфига (Android / hc-box)
 
-Конфиг **не хранится целиком** в одном JSON. Сборка в `singBox.getAndroidTemplate(ctx)` / `getIosTemplate(ctx)`:
+Конфиг читается из `template.sing-box.json` (override: `configs/`), обогащается auth per-user, дополняется outbound/endpoint протокола и inbounds:
 
 ```
-template.sing-box.json          # log, outbounds, route.final, experimental
-+ routingData.buildSingBoxRouting(loadRoutingData(), authForUser)
+template.sing-box.json
++ urlAuth.enrichUrlsInValue(authForUser)   # credentials в URL
 + outbound/endpoint из парсера протокола
 + inbounds (tun/socks)
 ```
 
-`routingData.loadRoutingData()` читает `routing.sing-box.json` (override: `configs/routing.sing-box.json`), валидирует и кеширует.
+Android получает три варианта: `tun`, `hybrid` (TUN+SOCKS), `socks` + `sing-box://import-remote-profile` подписки.
 
-### Маршрутизация (route)
+### Basic-auth во внутренних URL (sing-box / Throne)
 
-Порядок правил:
+Если HTTP(S) URL имеет тот же origin, что `webServer.baseUrl`, при генерации для пользователя в URL встраивается basic-auth (`urlAuth.enrichUrlsInValue` / `enrichThroneLine`). В исходных конфигах URL хранятся **без** credentials.
 
-1. apps → direct
-2. direct cidrs
-3. direct domains
-4. apps → proxy
-5. proxy cidrs
-6. proxy domains
+## Mihomo / Clash: сборка конфига (android-clash / iOS)
 
-Теги remote ruleset: `{source}-{basename}-{type}` (например `hydraponique-youtube-domains`, `hungcabinet-AS13335-cidrs`).
+Конфиг читается из `template.mihomo.yaml` (override: `configs/`):
 
-### DNS
+```
+template.mihomo.yaml
++ strip PROCESS-NAME / PROCESS-NAME-REGEX rules (только iOS)
++ enrichRuleProviders: header.Authorization для внутренних URL (URL не меняется)
++ proxy с name: proxy → proxies[]
++ proxy добавляется в группу PROXY
+```
 
-- direct domain lists + direct apps → `dns.directServer` (yandex)
-- proxy apps → `dns.defaultServer` (google)
-- остальное → `dns.defaultServer`
+- **android-clash**: только TUN yaml + `clash://install-config?url=...&name=...`
+- **iOS**: только TUN yaml; на сайте кнопки «Скачать» и «Копировать ссылку» (без copy-data и без clash:// deeplink)
 
-### Basic-auth во внутренних ruleset URL
-
-Если URL ruleset имеет тот же origin, что `webServer.baseUrl`, при генерации для пользователя в URL встраивается basic-auth (`urlAuth.embedBasicAuthInLink`). Применяется в sing-box `route.rule_set[].url` и в Throne `ruleset:...` строках. В `routing.sing-box.json` URL хранятся **без** credentials.
-
-### iOS
-
-`getIosTemplate` удаляет правила с `package_name` из dns/route (Android-only).
+Генерируется для протоколов с `mihomoEntity`: vless, awg, mieru. naiveproxy mihomo не поддерживает.
 
 ## Throne routing
 
-`throne.extractWindowsRoutes(ctx)` строит `direct-rules.txt` / `proxy-rules.txt` **напрямую** из `routing.sing-box.json` через `routingData.buildThroneRoutes()`, без reverse-parse собранного sing-box конфига. Basic-auth — per-user, как для sing-box.
-
-Приложения (`package_name`) в Throne rules **не экспортируются** (ограничение клиента).
+`throne.extractWindowsRoutes(ctx)` читает `throne.direct.txt` / `throne.proxy.txt` (override: `configs/`), обогащает `ruleset:<url>` строки auth per-user и записывает в `direct-rules.txt` / `proxy-rules.txt`.
 
 ## GenerationContext
 
@@ -109,7 +106,7 @@ template.sing-box.json          # log, outbounds, route.final, experimental
 
 Вспомогательные методы:
 
-- `dir(platform?)`, `getWinDir()/getAndroidDir()/...`,
+- `dir(platform?)`, `getWinDir()/getAndroidDir()/getAndroidClashDir()/getIosDir()/getRawDir()`,
 - `displayProtocol()` (использует `profileId`, если задан),
 - `serverDisplayName()` (через `config.getVpnServerConfig`).
 
@@ -121,25 +118,34 @@ template.sing-box.json          # log, outbounds, route.final, experimental
 - `layout` (`per-user` или `server-shared`),
 - `extractUsers` (для `server-shared`),
 - `getProfileId`,
-- `generate`.
+- `generate` — парсинг + `plan()` + `platformPipeline.run()`.
 
-`protocolHandlers`:
+`plan({ raw, android, androidClash, ios, iosMihomo, windows, telegram, mihomo, tunExclude })` строит матрицу платформ для `platformPipeline`.
 
-- `generateVless` — парсит ссылку, валидирует, эмитит multi-platform артефакты.
-- `generateAwg` — парсит `.conf`, эмитит endpoint-конфиги и Throne-подписку.
-- `generateNaiveproxy` — генерирует `naive-https` и, опционально, `naive-quic`.
-- `generateMieru` — читает `listeners[type=mieru]` из yaml, берёт endpoint из `vpnServers.*.mieru.ip` или fallback `listen`.
-- `generateTelegram` — добавляет Telegram proxy link.
+Handlers:
+
+- **vless** — sing-box outbound + mihomo proxy; android, android-clash, ios mihomo, windows Throne, raw.
+- **awg** — sing-box endpoint + mihomo wireguard; android, android-clash, ios (.conf + mihomo), windows Throne AWG, raw.
+- **naiveproxy** — sing-box outbound (naive-https / naive-quic); android, windows; mihomo нет.
+- **mieru** — sing-box + mihomo mieru proxy; android, android-clash, ios mihomo, raw.
+- **telegram** — deep link в common.
 
 ## Платформенный эмиттер
 
-`platformPipeline` централизует повторяющиеся шаги:
+`platformPipeline` writers по платформам:
 
-- raw outbound + дополнительные raw файлы;
-- Android (`tun`/`hybrid`/`socks`) через `android.processAndroidConfig` + `singBox.getAndroidTemplate(ctx)`;
-- iOS sing-box profile или copy `.conf` (для AWG);
-- Windows `.link` и `subscriptions.txt` для Throne;
-- Telegram deep-link в `common`.
+| Платформа | Форматы | Writer |
+|-----------|---------|--------|
+| `raw` | `singboxOutbound`, `singboxEndpoint`, `mihomoProxy` | JSON/yaml outbound, копии .conf, per-protocol proxy yaml |
+| `android` | `singbox` | tun/hybrid/socks через `android.processAndroidConfig` |
+| `android-clash` | `mihomo` | TUN yaml + clash:// через `androidClash.processAndroidClashConfig` |
+| `ios` | `copyConf`, `mihomo` | AWG .conf и/или TUN yaml (без clash deeplink) |
+| `windows` | `throneLink`, `awg` | `.link` + `subscriptions.txt` |
+| `telegram` | `proxyLink` | deep link в common |
+
+## Raw mihomo proxies
+
+`mihomoProxies.collect()` накапливает proxy per server/user; `flushAll()` после обработки всех файлов сервера пишет `{server}-{user}-all-proxies.yaml` в `raw/`.
 
 ## Отчёт и контроль ошибок
 
@@ -149,9 +155,3 @@ template.sing-box.json          # log, outbounds, route.final, experimental
 - считает `processed` и `skipped`,
 - печатает итоговый summary,
 - предоставляет `hasErrors()` для фатального завершения процесса.
-
-Ошибки в `routing.sing-box.json` (`ROUTING_INVALID`) также завершают процесс при загрузке.
-
-## Планируется
-
-- `routing.mihomo.json` — отдельные данные маршрутизации для Mihomo (по аналогии с sing-box).

@@ -127,6 +127,9 @@ function parseData(configData, endpoint = undefined, userName = undefined, withQ
     return {
         success: true,
         singBoxEntity: convertToSingBoxEntity(parsed, tag, domainResolver, withQuic),
+        singBoxConverterErrors: [],
+        mihomoEntity: undefined,
+        mihomoConverterErrors: [],
         warnings,
         errors: [],
         parsed

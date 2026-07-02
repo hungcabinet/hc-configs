@@ -8,8 +8,7 @@
   "outbounds": [
     {
       "type": "direct",
-      "tag": "direct",
-      "domain_resolver": "yandex"
+      "tag": "direct"
     },
     {
       "type": "block",
@@ -18,7 +17,6 @@
   ],
   "route": {
     "auto_detect_interface": true,
-    "default_domain_resolver": "yandex",
     "final": "proxy"
   },
   "experimental": {

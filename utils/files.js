@@ -1,5 +1,6 @@
 ﻿import fs from 'fs';
 import path from 'path';
+import yaml from 'js-yaml';
 import config from './config.js';
 import protocolRegistry from './protocolRegistry.js';
 
@@ -158,6 +159,7 @@ function prepareContextDirs(ctx){
     prepareDir(ctx.getCommonDir());
     prepareDir(ctx.getWinDir());
     prepareDir(ctx.getAndroidDir());
+    prepareDir(ctx.getAndroidClashDir());
     prepareDir(ctx.getIosDir());
     prepareDir(ctx.getRawDir());
 }
@@ -169,4 +171,11 @@ function saveJsonObject(ctx, jObject, targetDir, type){
     return filePath;
 }
 
-export default { getUserFiles, getFileName, prepareContextDirs, prepareDir, saveJsonObject, getRelativeDestinationFilePath, getUserDestinationPath };
+function saveYamlObject(ctx, object, targetDir, type) {
+    const filePath = path.join(targetDir, `${getFileName(ctx, `${ctx.protocol}-${type}`)}.yaml`);
+    fs.writeFileSync(filePath, yaml.dump(object, { lineWidth: -1, noRefs: true }));
+
+    return filePath;
+}
+
+export default { getUserFiles, getFileName, prepareContextDirs, prepareDir, saveJsonObject, saveYamlObject, getRelativeDestinationFilePath, getUserDestinationPath };

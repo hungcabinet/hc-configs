@@ -24,6 +24,7 @@ const linkTypePriority = [
 const platformPriority = [
     "telegram",
     "android",
+    "android-clash",
     "windows",
     "ios",
     "raw"
@@ -70,7 +71,9 @@ function getUserData(user){
 function getPlatformName(platform){
     switch(platform){
         case "android":
-            return "Android";
+            return "Android (hc-box)";
+        case "android-clash":
+            return "Android (Clash Mi)";
         case "ios":
             return "iOS";
         case "windows":

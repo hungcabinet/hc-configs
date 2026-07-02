@@ -1,6 +1,6 @@
 ﻿import config from "./config.js";
 import merge from "deepmerge";
-import routingData from "./routingData.js";
+import urlAuth from "./urlAuth.js";
 
 const SING_BOX_TEMPLATE_FILE = 'template.sing-box.json';
 const SOCKS_INBOUND_TEMPLATE_FILE = 'inbound.socks.sing-box.json';
@@ -51,32 +51,14 @@ function getTunInbound(endpointHosts){
 
 function getAndroidTemplate(ctx){
     const base = JSON.parse(singBoxTemplate);
-    const authOptions = routingData.getAuthOptionsForUser(ctx?.user);
-    const routing = routingData.buildSingBoxRouting(routingData.loadRoutingData(), authOptions);
+    const authOptions = urlAuth.getAuthOptionsForUser(ctx?.user);
+    const enriched = urlAuth.enrichUrlsInValue(base, authOptions);
 
     return merge({
         outbounds: [],
         inbounds: [],
         endpoints: []
-    }, merge(base, routing));
-}
-
-function getIosTemplate(ctx){
-    let result = getAndroidTemplate(ctx);
-
-    let dnsRules = result.dns?.rules;
-
-    if (dnsRules !== undefined){
-        result.dns.rules = dnsRules.filter(item => !("package_name" in item) && !("package_name_regex" in item));
-    }
-
-    let routeRules = result.route?.rules;
-
-    if (routeRules !== undefined){
-        result.route.rules = routeRules.filter(item => !("package_name" in item) && !("package_name_regex" in item));
-    }
-
-    return result;
+    }, enriched);
 }
 
 function getSubscriptionLink(ctx, originalLink, type){
@@ -87,4 +69,4 @@ function getSubscriptionLink(ctx, originalLink, type){
     return `sing-box://import-remote-profile?url=${encodedLink}#${connectionName}`;
 }
 
-export default { getSocksInbound, getTunInbound, getAndroidTemplate, getIosTemplate, getSubscriptionLink};
+export default { getSocksInbound, getTunInbound, getAndroidTemplate, getSubscriptionLink };

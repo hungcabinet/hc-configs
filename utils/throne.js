@@ -1,11 +1,28 @@
 ﻿import fs from "fs";
 import path from "path";
 import base64url from "base64url";
-import routingData from "./routingData.js";
+import config from "./config.js";
+import urlAuth from "./urlAuth.js";
+
+const THRONE_DIRECT_FILE = 'throne.direct.txt';
+const THRONE_PROXY_FILE = 'throne.proxy.txt';
+
+function readThroneLines(fileName) {
+    const content = config.getConfigContent(fileName);
+
+    return content
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean);
+}
 
 function extractWindowsRoutes(ctx){
-    const authOptions = routingData.getAuthOptionsForUser(ctx?.user);
-    return routingData.buildThroneRoutes(routingData.loadRoutingData(), authOptions);
+    const authOptions = urlAuth.getAuthOptionsForUser(ctx?.user);
+
+    return {
+        direct: readThroneLines(THRONE_DIRECT_FILE).map((line) => urlAuth.enrichThroneLine(line, authOptions)),
+        proxy: readThroneLines(THRONE_PROXY_FILE).map((line) => urlAuth.enrichThroneLine(line, authOptions)),
+    };
 }
 
 function addLinkToSubscription(targetDir, data){

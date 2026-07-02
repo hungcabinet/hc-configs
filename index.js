@@ -10,9 +10,11 @@ import throne from "./utils/throne.js";
 import telegram from "./utils/telegram.js";
 import protocolRegistry from "./utils/protocolRegistry.js";
 import report from "./utils/report.js";
+import mihomoProxies from "./utils/mihomoProxies.js";
 
 async function mainProcess(){
     report.reset();
+    mihomoProxies.reset();
 
     let commonConfig = config.getCommonConfig();
     let userFilesData = files.getUserFiles(commonConfig)
@@ -40,6 +42,8 @@ async function mainProcess(){
                 report.warn('unknown', file.path, `Неизвестный тип файла: ${file.name}`);
             }
         }
+
+        mihomoProxies.flushAll(data.userName, data.srvName);
     }
 
     for (const user of users) {

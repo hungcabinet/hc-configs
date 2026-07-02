@@ -19,13 +19,16 @@ Origin remote: `git@github.com:hungcabinet/hc-configs.git`
 
 ### Платформы (выходные артефакты)
 
-- `android`:
+- `android` (hc-box / sing-box):
   - `*-tun.json`
   - `*-hybrid.json` (TUN + SOCKS)
   - `*-socks.json`
-  - subscription-ссылки для `hc-box` (`sing-box://import-remote-profile`)
+  - subscription-ссылки (`sing-box://import-remote-profile`)
+- `android-clash` (Clash / mihomo):
+  - `*-tun.yaml` (только TUN)
+  - subscription-ссылки (`clash://install-config?url=...&name=...`)
 - `ios`:
-  - `*-tun.json` для `sing-box`
+  - `*-tun.yaml` для Clash / mihomo (vless, mieru, awg)
   - для AWG также копия `*.conf` (подходит для `AmneziaVPN` / `AmneziaWG`)
 - `windows`:
   - `*.link` для `Throne`
@@ -33,17 +36,19 @@ Origin remote: `git@github.com:hungcabinet/hc-configs.git`
   - `direct-rules.txt` и `proxy-rules.txt`
 - `raw`:
   - `*-outbound.json` (или `*-https-outbound.json` для naive-https)
+  - `*-proxy.yaml` — proxy для кастомных mihomo-конфигов
+  - `*-all-proxies.yaml` — все proxy сервера в одном файле
   - дополнительные исходники (`*.link`, `*.conf`)
 - `telegram`:
   - deep-link и файл-ссылка
 
 ### Клиенты
 
-- Android: `hc-box` (через конфиги и subscription links)
-- iOS: `sing-box`, `AmneziaVPN`, `AmneziaWG`
+- Android: `hc-box` (sing-box конфиги и подписки), Clash/mihomo (через `android-clash`)
+- iOS: Clash/mihomo (TUN yaml), `AmneziaVPN`, `AmneziaWG` (AWG `.conf`)
 - Windows: `Throne`
 - Telegram: Telegram Proxy deep links
-- Universal / advanced: кастомные конфиги `sing-box` / `hc-box` из `raw`
+- Universal / advanced: sing-box outbounds из `raw`, mihomo proxies из `raw`
 
 ---
 
@@ -155,7 +160,7 @@ cp defaultConfigs/config.json.sample configs/config.json
   - ключи: `enabled`, `host`, `destination`, `user`.
 - `webServer`
   - включает генерацию ссылок с публичным `baseUrl`.
-  - `users`: список пользователей для встраивания basic-auth в ссылки (файлы на сайте, subscription URL, **внутренние URL ruleset** в sing-box и Throne).
+  - `users`: список пользователей для basic-auth в ссылках на сайте, subscription URL, **внутренних URL ruleset** в sing-box и Throne, а также **`Authorization` header** в mihomo `rule-providers`.
   - `sshAuth`: автоматическое создание/обновление пользователей в удалённом `.htpasswd` через SSH.
     - `enabled`: включить/выключить.
     - `host`: SSH-хост для подключения.
@@ -163,14 +168,16 @@ cp defaultConfigs/config.json.sample configs/config.json
     - `htpasswdPath`: путь к файлу паролей на удалённом сервере.
     - **Важно**: Первый пользователь должен быть создан вручную с флагом `-c` (см. раздел 4, шаг 2).
 
-### Override sing-box конфигов
+### Override конфигов
 
 Файлы из `defaultConfigs/` можно переопределить, положив копию в `configs/` (полная замена файла):
 
 | Файл | Назначение |
 |------|------------|
-| `routing.sing-box.json` | DNS, приложения, remote ruleset lists |
-| `template.sing-box.json` | Базовый каркас sing-box (log, outbounds, experimental) |
+| `template.sing-box.json` | Полный sing-box конфиг (DNS, route, rule_set, outbounds) |
+| `template.mihomo.yaml` | Полный mihomo конфиг (TUN, proxy-groups, rules, rule-providers) |
+| `throne.direct.txt` | Direct rules для Throne (`ruleset:<url>` на строку) |
+| `throne.proxy.txt` | Proxy rules для Throne |
 | `inbound.socks.sing-box.json` | SOCKS inbound |
 | `inbound.tun.sing-box.json` | TUN inbound |
 
@@ -257,67 +264,36 @@ crontab -e
 
 ---
 
-## 3) Маршрутизация sing-box и Throne
+## 3) Маршрутизация sing-box, mihomo и Throne
 
-Маршрутизация **не зашита** в монолитный JSON. Данные в `defaultConfigs/routing.sing-box.json` (или `configs/routing.sing-box.json`) собираются в runtime модулем `utils/routingData.js`.
+Маршрутизация хранится **готовыми файлами** в `defaultConfigs/` (override: `configs/`):
 
-### Структура `routing.sing-box.json`
+- `template.sing-box.json` — полный sing-box конфиг с DNS, `route.rule_set`, `route.rules` и базовыми outbounds. При генерации Android-конфигов к нему добавляются inbounds/outbounds/endpoints протоколов.
+- `template.mihomo.yaml` — полный mihomo конфиг с TUN, `proxy-groups`, `rules` и опционально `rule-providers`. При генерации в `proxies` добавляется proxy с `name: proxy`, он попадает в группу `PROXY`.
+- `throne.direct.txt` / `throne.proxy.txt` — правила Throne, по одной строке `ruleset:<url>`.
 
-```json
-{
-  "dns": {
-    "directServer": "yandex",
-    "defaultServer": "google",
-    "servers": [ "..." ]
-  },
-  "apps": {
-    "direct": [ "com.vkontakte.android" ],
-    "proxy": []
-  },
-  "rulesetDownload": {
-    "default": "direct",
-    "proxy": []
-  },
-  "lists": {
-    "direct": {
-      "cidrs": [ "https://example.com/routing/direct.srs" ],
-      "domains": [ "https://example.com/routing/apple.srs" ]
-    },
-    "proxy": {
-      "domains": [ "https://example.com/routing/youtube.srs" ]
-    }
-  }
-}
-```
+В `defaultConfigs/` лежат минимальные заготовки; рабочие правила — в `configs/`.
 
-- **lists** — remote `.srs` URL, сгруппированные по `direct`/`proxy` и `cidrs`/`domains`. Пустые группы можно не указывать.
-- **apps** — Android package names; `direct` и `proxy` маршрутизируются отдельно (iOS-конфиги rules с `package_name` не получают).
-- **rulesetDownload** — через какой outbound sing-box **скачивает** ruleset (`download_detour`). По умолчанию `direct`; исключения — URL в массиве `proxy` (должны быть и в `lists`).
-- **dns** — резолверы и правила: direct-трафик → `directServer`, остальное → `defaultServer`.
+### Mihomo / Clash (android-clash, iOS)
 
-### Именование ruleset
-
-Тег вычисляется автоматически: `{source}-{basename}-{type}`
-
-- `https://…/routing/hydraponique/geosite/youtube.srs` → `hydraponique-youtube-domains`
-- `https://…/routing/hungcabinet/sing-box/cidrs/asn/v4/AS13335.srs` → `hungcabinet-AS13335-cidrs`
-
-### Порядок route rules
-
-1. apps → direct  
-2. direct cidrs → direct  
-3. direct domains → direct  
-4. apps → proxy  
-5. proxy cidrs → proxy  
-6. proxy domains → proxy  
+- Генерируются **только TUN**-конфиги (без hybrid/socks).
+- **android-clash**: yaml-файл + deeplink `clash://install-config?url=URL_ПОДПИСКИ&name=ИМЯ_ПРОФИЛЯ`.
+- **iOS**: тот же yaml, но на сайте только «Скачать» и «Копировать ссылку»; правила `PROCESS-NAME` и `PROCESS-NAME-REGEX` удаляются при чтении шаблона.
+- Поддерживается для протоколов с mihomo-конвертером: vless, awg, mieru.
 
 ### Throne (Windows)
 
-`direct-rules.txt` и `proxy-rules.txt` строятся из тех же `lists` (строки `ruleset:<url>`). Приложения в Throne rules не попадают.
+При генерации `throne.*.txt` копируются в per-user `direct-rules.txt` / `proxy-rules.txt` с обогащением URL.
 
-### Basic-auth во внутренних ruleset URL
+### Basic-auth во внутренних URL
 
-Если URL ruleset имеет тот же origin, что `webServer.baseUrl`, при генерации для каждого пользователя в URL встраивается basic-auth (логин/пароль из `webServer.users`). В конфиге URL хранятся **без** credentials. Внешние URL (другой origin) не меняются.
+Если HTTP(S) URL имеет тот же origin, что `webServer.baseUrl`, при генерации для каждого пользователя подставляется basic-auth (логин/пароль из `webServer.users`). В исходных конфигах URL хранятся **без** credentials. Внешние URL (другой origin) не меняются.
+
+| Контекст | Способ auth |
+|----------|-------------|
+| Ссылки на сайте, sing-box ruleset URL | credentials в URL (`https://user:pass@host/...`) |
+| Throne rules (`ruleset:<url>`) | credentials в URL |
+| mihomo `rule-providers` | `header.Authorization: ['Basic ...']`, URL без изменений |
 
 ---
 
@@ -407,7 +383,7 @@ sudo systemctl reload nginx
 1. `npm install`
 2. `cp defaultConfigs/config.json.sample configs/config.json`
 3. Заполнить `configs/config.json` (`webServer`, `vpnServers`, `rsync`)
-4. При необходимости: `cp defaultConfigs/routing.sing-box.json configs/routing.sing-box.json` и настроить lists
+4. При необходимости: скопировать и настроить `template.sing-box.json`, `template.mihomo.yaml`, `throne.direct.txt`, `throne.proxy.txt` в `configs/`
 5. Положить входные файлы в `data/src/...`
 6. `node index.js`
 7. Проверить `data/dst` и публикацию через Nginx

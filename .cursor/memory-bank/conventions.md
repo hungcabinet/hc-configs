@@ -6,8 +6,8 @@
 - Русские пользовательские тексты (описания ссылок, ошибки валидации, summary).
 - Вместо mutable global context используется immutable `GenerationContext`.
 - Парсинг и валидация отделены от генерации:
-  - `utils/parsers/*` возвращают `{ success, warnings, errors, ... }`,
-  - `utils/protocolHandlers.js` решает, что генерировать.
+  - `utils/parsers/*` возвращают `{ success, warnings, errors, mihomoEntity?, singBoxEntity?, ... }`,
+  - `utils/protocolRegistry.js` (inline `generate`) решает, что генерировать через `plan()` + `platformPipeline.run()`.
 
 ## Формат входа (`data/src`)
 
@@ -20,11 +20,12 @@ data/src/
       telegram*.link
     naiveproxy*.json
     mieru*.yaml
+    mihomo*.yaml
 ```
 
 - Матчинг файлов и layout задаются в `utils/protocolRegistry.js`, а не в `index.js`.
 - Для `server-shared` источников (naiveproxy/mieru) пользователи извлекаются из файла (`extractUsers`).
-- Для `mieru` пользователи берутся из `listeners[type=mieru].users` (ключи объекта), endpoint — из `vpnServers.*.mieru.ip` с fallback на `listen`.
+- Для `mieru`/`mihomo` пользователи берутся из `listeners[type=mieru].users` (ключи объекта), endpoint — из `vpnServers.*.mieru.ip` с fallback на `listen`.
 
 ## Формат выхода (`data/dst`)
 
@@ -39,13 +40,14 @@ data/dst/users/{user}/
       direct-rules.txt
       proxy-rules.txt
   {server}/
-    android/  *-tun.json, *-hybrid.json, *-socks.json
-    ios/      *-tun.json или *.conf
-    windows/  *.link
-    raw/      *-outbound.json, *.link, *.conf
+    android/         *-tun.json, *-hybrid.json, *-socks.json
+    android-clash/   *-tun.yaml
+    ios/             *-tun.yaml, *.conf (AWG)
+    windows/         *.link
+    raw/             *-outbound.json, *-proxy.yaml, *-all-proxies.yaml, *.link, *.conf
 ```
 
-## Naming правилa
+## Naming правила
 
 - Базовое имя: `{server}-{user}-{suffix}`.
 - `suffix` строится от `protocol`; при наличии профильного имени применяется `profileId` (`utils/sourceProfile.js` + `files.resolveFileNameSuffix`).
@@ -53,9 +55,11 @@ data/dst/users/{user}/
 
 ## Веб-ссылки и приоритеты
 
-- Приоритет платформ: `telegram` → `android` → `windows` → `ios` → `raw`.
-- Приоритет linkType: `telegram` → `subscription` → `config` → `routing` → `link` → `outbound` → `inbound`.
+- Приоритет платформ: `telegram` → `android` → `android-clash` → `windows` → `ios` → `raw`.
+- Приоритет linkType: `telegram` → `subscription` → `config` → `routing` → `link` → `outbound` → `inbound` → `proxy`.
 - Атрибуты ссылок: `open`, `download`, `copy-data`, `copy-link`.
+- **android-clash**: config — `download` + `copy-data`; subscription — `clash://` (open).
+- **iOS mihomo**: config — только `download` + `copy-link`.
 
 ## Конфиг и override
 
@@ -66,69 +70,49 @@ data/dst/users/{user}/
   - `vpnServers.default.mieru.ip: "203.0.113.10"` (глобально),
   - `vpnServers.servers.{server}.mieru.ip` (переопределение для конкретного сервера).
 
-## Sing-box конфиги (`defaultConfigs/`)
+## Override-файлы (`defaultConfigs/`)
 
 | Файл | Назначение |
 |------|------------|
-| `routing.sing-box.json` | DNS, apps, remote ruleset lists, download detour |
-| `template.sing-box.json` | Минимальный каркас sing-box (без route rules) |
+| `template.sing-box.json` | Полный sing-box конфиг (DNS, route, rule_set, outbounds) |
+| `template.mihomo.yaml` | Полный mihomo конфиг (TUN, proxy-groups, rules, rule-providers) |
+| `throne.direct.txt` | Direct rules для Throne (`ruleset:<url>` на строку) |
+| `throne.proxy.txt` | Proxy rules для Throne |
 | `inbound.socks.sing-box.json` | SOCKS inbound |
 | `inbound.tun.sing-box.json` | TUN inbound |
 
 Override: положить файл с тем же именем в `configs/`.
 
-### Формат `routing.sing-box.json`
-
-```json
-{
-  "dns": {
-    "directServer": "yandex",
-    "defaultServer": "google",
-    "servers": [ "... sing-box dns servers ..." ]
-  },
-  "apps": {
-    "direct": [ "com.example.app" ],
-    "proxy": []
-  },
-  "rulesetDownload": {
-    "default": "direct",
-    "proxy": []
-  },
-  "lists": {
-    "direct": {
-      "cidrs": [ "https://.../direct.srs" ],
-      "domains": [ "https://.../apple.srs" ]
-    },
-    "proxy": {
-      "cidrs": [],
-      "domains": [ "https://.../youtube.srs" ]
-    }
-  }
-}
-```
-
-- Пустые группы (`cidrs`, `domains`, `direct`, `proxy`) можно опускать.
-- Legacy: `apps` как плоский массив → трактуется как `apps.direct`.
-- Legacy: `lists` как массив `{ route, type, url }` — поддерживается для старых override.
-- Тег ruleset: `{source}-{basename}-{type}` (source — сегмент пути после `/routing/`, basename — имя `.srs` без расширения).
-- `rulesetDownload.proxy` — URL, которые скачиваются через `download_detour: "proxy"`; каждый URL должен присутствовать в `lists`.
-
 ### Basic-auth
 
+**sing-box / Throne / ссылки на сайте:**
 - `utils/urlAuth.js` — если HTTP(S) URL имеет origin = `webServer.baseUrl`, при генерации встраивается `user:password@` из `webServer.users`.
-- Применяется к ссылкам на сайте (`webSite.js`) и к ruleset URL в sing-box / Throne (`routingData.js`, per-user).
+- Применяется к ссылкам на сайте, URL в sing-box template и строкам Throne rules.
+
+**mihomo rule-providers:**
+- URL **не меняется**; для внутренних origin добавляется `header.Authorization: ['Basic ...']` в объект rule-provider.
+
+**iOS mihomo:**
+- При чтении `template.mihomo.yaml` удаляются правила `PROCESS-NAME` и `PROCESS-NAME-REGEX`.
+
+## Mihomo client config
+
+- Прокси вставляется в `proxies` с `name: proxy`.
+- Прокси добавляется в группу `PROXY` (`proxy-groups[].name === 'PROXY'`).
+- Подписка android-clash: `clash://install-config?url={encodedUrl}&name={encodedName}`.
 
 ## Как добавить новый протокол
 
-1. Добавить parser в `utils/parsers/{protocol}.js` с `source` и `to*`.
-2. Зарегистрировать его в `utils/protocolRegistry.js` (`pattern`, `layout`, `generate`).
-3. Реализовать `generate*` в `utils/protocolHandlers.js`.
-4. Использовать `platformPipeline` для платформенных артефактов.
+1. Добавить parser в `utils/parsers/{protocol}.js` с `source`, `parseData` и при необходимости `mihomoEntity`.
+2. Зарегистрировать handler в `utils/protocolRegistry.js` (`pattern`, `layout`, `generate`).
+3. В `generate` вызвать `platformPipeline.run()` с нужным `plan({ android, androidClash, iosMihomo, ... })`.
+4. При необходимости добавить writer в `platformPipeline.js`.
 5. Вести валидацию через `report.logValidation` и счётчики `recordProcessed/recordSkipped`.
 
 ## Текущие ограничения/риски
 
-- `webServer.writeWebFiles()` ожидает `docs/for-users.pdf`; отсутствие файла вызовет ошибку `copyFileSync`.
+- `webServer.writeWebFiles()` ожидает `docs/for-users.pdf` и `docs/for-admins.pdf`; отсутствие файла вызовет ошибку `copyFileSync`.
 - `rsync` логически Linux-oriented (проверять окружение перед включением).
 - `configs/` и `data/` не версионируются, поэтому локальная среда обязательна для запуска.
-- `routing.mihomo.json` — планируется отдельно от sing-box.
+- Mihomo/Clash конфиги генерируются только в TUN-режиме (без hybrid/socks вариантов).
+- naiveproxy не конвертируется в mihomo proxy.

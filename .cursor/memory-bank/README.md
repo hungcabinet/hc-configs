@@ -11,7 +11,7 @@
 ## Быстрый старт
 
 1. Скопировать `defaultConfigs/config.json.sample` в `configs/config.json`.
-2. Подготовить входные файлы в `data/src/{server}/{user}/` (и `naiveproxy*.json` на уровне сервера при необходимости).
+2. Подготовить входные файлы в `data/src/{server}/{user}/` (и `naiveproxy*.json` / `mieru*.yaml` на уровне сервера при необходимости).
 3. Запустить `node index.js`.
 4. Проверить результат в `data/dst/` и отчёт в stdout (`=== Отчёт генерации ===`).
 
@@ -22,22 +22,27 @@
 
 - Оркестрация: `index.js`
 - Контекст генерации: `utils/generationContext.js`
-- Реестр протоколов: `utils/protocolRegistry.js`
-- Обработчики протоколов: `utils/protocolHandlers.js`
+- Реестр протоколов и handlers: `utils/protocolRegistry.js`
 - Парсеры: `utils/parsers/*.js`
 - Платформенный вывод: `utils/platformPipeline.js`
 - sing-box шаблон и inbounds: `utils/singBox.js`
-- Маршрутизация sing-box / Throne rules: `utils/routingData.js`
-- Basic-auth во внутренних URL: `utils/urlAuth.js`
+- mihomo/Clash шаблон и client config: `utils/mihomo.js`
+- Android Clash (TUN): `utils/androidClash.js`
+- Агрегация raw mihomo proxies: `utils/mihomoProxies.js`
+- Basic-auth и обогащение URL: `utils/urlAuth.js`
 - Веб-портал: `utils/webSite.js`
 - Отчётность/валидация: `utils/report.js`
 
-## Override конфигов sing-box
+## Override конфигов
 
 Файлы из `defaultConfigs/` можно переопределить через `configs/` (тот же относительный путь):
 
-- `routing.sing-box.json` — списки маршрутизации, DNS, приложения
-- `template.sing-box.json` — базовый каркас sing-box (log, outbounds, route.final)
+**sing-box / hc-box:**
+- `template.sing-box.json` — полный sing-box конфиг (DNS, route, rule_set)
+- `throne.direct.txt`, `throne.proxy.txt` — правила Throne
 - `inbound.socks.sing-box.json`, `inbound.tun.sing-box.json` — inbounds
+
+**mihomo / Clash:**
+- `template.mihomo.yaml` — полный mihomo конфиг (TUN, proxy-groups, rules, rule-providers)
 
 Подробности формата — в `conventions.md` и `readme.md`.

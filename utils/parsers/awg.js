@@ -46,6 +46,62 @@ function convertToSingBoxEntity(parsed, tag, domainResolver) {
     };
 }
 
+function pickAddressByVersion(addresses, version) {
+    return addresses.find((addr) => {
+        const host = addr.split('/')[0];
+        const isIpv6 = host.includes(':');
+        return version === 6 ? isIpv6 : !isIpv6;
+    });
+}
+
+function convertMihomoEntity(parsed, tag) {
+    const { interface: iface, peers } = parsed;
+    const awgParams = iface.awg;
+    const ip = pickAddressByVersion(iface.address, 4);
+    const ipv6 = pickAddressByVersion(iface.address, 6);
+
+    const entity = {
+        name: tag,
+        type: "wireguard",
+        "private-key": iface.privateKey,
+        ip: ip,
+        ipv6: ipv6,
+        peers: peers.map((peer) => ({
+            server: peer.endpointHost,
+            port: peer.endpointPort,
+            "public-key": peer.PublicKey,
+            "pre-shared-key": peer.PresharedKey,
+            "allowed-ips": peer.allowedIPsList,
+            "persistent-keepalive": parseInt(peer.PersistentKeepalive),
+        })),
+        udp: true,
+        mtu: iface.mtu,
+        "amnezia-wg-option": {
+            jc: awgParams.Jc,
+            jmin: awgParams.Jmin,
+            jmax: awgParams.Jmax,
+
+            h1: awgParams.H1,
+            h2: awgParams.H2,
+            h3: awgParams.H3,
+            h4: awgParams.H4,
+
+            s1: awgParams.S1,
+            s2: awgParams.S2,
+            s3: awgParams.S3,
+            s4: awgParams.S4,
+
+            i1: awgParams.I1,
+            i2: awgParams.I2,
+            i3: awgParams.I3,
+            i4: awgParams.I4,
+            i5: awgParams.I5,
+        }
+    };
+
+    return entity;
+}
+
 function parseData(configString, tag = 'proxy', domainResolver = 'google') {
     const warnings = [];
     const errors = [];
@@ -343,6 +399,9 @@ function parseData(configString, tag = 'proxy', domainResolver = 'google') {
         return {
             success: parseSucceeded,
             singBoxEntity: parseSucceeded ? convertToSingBoxEntity(parsed, tag, domainResolver) : undefined,
+            singBoxConverterErrors : [],
+            mihomoEntity: parseSucceeded ? convertMihomoEntity(parsed, tag) : undefined,
+            mihomoConverterErrors : [],
             warnings,
             errors,
             parsed

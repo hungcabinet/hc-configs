@@ -17,8 +17,8 @@ function convertToSingBoxEntity(warnings, convertErrors, parsed, tag, domainReso
         convertErrors.push(`flow=${flow} не поддерживается в sing-box. Поддерживается только "xtls-rprx-vision" или пустое значение.`);
     }
 
-    if (type !== 'tcp' && type !== 'ws' && type !== 'grpc' && type !== 'http') {
-        warnings.push(`type=${type} — sing-box поддерживает tcp, ws, grpc, но Reality лучше всего работает с tcp`);
+    if (type !== 'tcp') {
+        convertErrors.push(`type=${type} — данный конфигуратор поддерживает только tcp транспорт`);
     }
 
     if (convertErrors.length > 0) {
@@ -68,6 +68,52 @@ function convertToSingBoxEntity(warnings, convertErrors, parsed, tag, domainReso
     }
 
     return singBoxEntity;
+}
+
+function convertToMihomoEntity(warnings, convertErrors, parsed, tag) {
+    const { uuid, address, port, security, type, flow, fp, sni, pbk, sid } = parsed;
+    const isReality = security === 'reality';
+
+    if (security !== 'reality' && security !== 'tls' && security !== 'none') {
+        warnings.push(`security=${security} — mihomo лучше всего работает с reality или tls`);
+    }
+
+    if (flow && flow !== 'xtls-rprx-vision') {
+        convertErrors.push(`flow=${flow} не поддерживается в mihomo. Поддерживается только "xtls-rprx-vision" или пустое значение.`);
+    }
+
+    if (type !== 'tcp') {
+        convertErrors.push(`type=${type} — данный конфигуратор поддерживает только tcp транспорт`);
+    }
+
+    if (convertErrors.length > 0) {
+        return undefined;
+    }
+
+    let mihomoEntity = {
+        name: tag,
+        type: "vless",
+        server: address,
+        port: port,
+        udp: true,
+        uuid,
+        flow: flow || undefined,
+        "packet-encoding": "xudp",
+        network: type === 'tcp' ? undefined : type,
+        tls: true,
+        servername: sni || (isReality ? 'www.microsoft.com' : address),
+        "client-fingerprint": fp
+    };
+
+    if (isReality) {
+        mihomoEntity["reality-opts"] ={
+            "public-key": pbk,
+            "short-id": sid || undefined,
+            "support-x25519mlkem768": false
+        }
+    }
+
+    return mihomoEntity;
 }
 
 function parseInput(vlessLink, defaultFingerPrint, warnings, parseErrors) {
@@ -131,15 +177,21 @@ function parseData(vlessLink, defaultFingerPrint = "firefox", tag = 'proxy', dom
             return { success: false, errors: parseErrors, warnings };
         }
 
-        const convertErrors = [];
-        const singBoxEntity = convertToSingBoxEntity(warnings, convertErrors, parsed, tag, domainResolver);
+        const singBoxConverterErrors = [];
+        const singBoxEntity = convertToSingBoxEntity(warnings, singBoxConverterErrors, parsed, tag, domainResolver);
+
+        const mihomoConverterErrors = [];
+        const mihomoEntity = convertToMihomoEntity(warnings, mihomoConverterErrors, parsed, tag);
 
         return {
             success: true,
             parsed,
             warnings,
-            errors: convertErrors,
-            singBoxEntity
+            errors: [],
+            singBoxEntity,
+            singBoxConverterErrors,
+            mihomoEntity,
+            mihomoConverterErrors
         };
 
     } catch (err) {
