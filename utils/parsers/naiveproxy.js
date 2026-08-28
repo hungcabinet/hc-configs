@@ -83,9 +83,9 @@ function convertToSingBoxEntity(parsed, tag, domainResolver, withQuic) {
         password: parsed.password
     };
 
-    if (domainResolver) {
-        singBoxEntity.domain_resolver = domainResolver;
-    }
+    // if (domainResolver) {
+    //     singBoxEntity.domain_resolver = domainResolver;
+    // }
 
     if (withQuic) {
         singBoxEntity.quic = true;

@@ -13,7 +13,7 @@ function convertToSingBoxEntity(parsed, tag, domainResolver) {
         tag,
         mtu: iface.mtu,
         type: "awg",
-        domain_resolver: domainResolver,
+        //domain_resolver: domainResolver,
 
         jc: awgParams.Jc,
         jmin: awgParams.Jmin,

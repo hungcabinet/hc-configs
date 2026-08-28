@@ -55,9 +55,9 @@ function convertToSingBoxEntity(warnings, convertErrors, parsed, tag, domainReso
 
     singBoxEntity.tls = tls;
 
-    if (domainResolver) {
-        singBoxEntity.domain_resolver = domainResolver;
-    }
+    // if (domainResolver) {
+    //     singBoxEntity.domain_resolver = domainResolver;
+    // }
 
     if (isReality && flow !== 'xtls-rprx-vision') {
         warnings.push('Reality рекомендуется использовать вместе с flow=xtls-rprx-vision');
@@ -156,7 +156,7 @@ function parseInput(vlessLink, defaultFingerPrint, warnings, parseErrors) {
         parseErrors.push('Reality включён, но отсутствует параметр pbk (public_key)');
     }
 
-    const validFingerprints = ['safari', 'firefox', 'edge'];
+    const validFingerprints = ['firefox', 'edge', 'qq'];
     if (!validFingerprints.includes(fp)) {
         fp = defaultFingerPrint || "firefox";
     }
@@ -209,10 +209,10 @@ function fixVlessLink(vlessLink, customName = undefined, platform = 'windows'){
     let fp = params.get('fp') || 'firefox';
 
     if (platform === "ios"){
-        params.set('fp', "safari");
+        params.set('fp', "firefox");
     }
     else{
-        const validFingerprints = ['safari', 'firefox', 'edge'];
+        const validFingerprints = ['firefox', 'edge'];
 
         if (!validFingerprints.includes(fp)) {
             fp = validFingerprints[Math.floor(Math.random() * validFingerprints.length)];
