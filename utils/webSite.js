@@ -142,7 +142,7 @@ function addUserFileLink(ctx, filePath, text, linkType = "common", attributes= [
 
     url.pathname = `/${relative}`;
 
-    return addUserSimpleLink(ctx, url.href, text, linkType, attributes, filePath);
+    return addUserSimpleLink(ctx, url.href, text, linkType, attributes, url.href);
 }
 
 function addUserSimpleLink(ctx, link, text, linkType = "common", attributes= ["open"], downloadLink = link){
