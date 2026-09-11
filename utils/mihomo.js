@@ -52,11 +52,11 @@ function enrichRuleProviders(ruleProviders, authOptions) {
     return result;
 }
 
-function getTemplate(ctx, { forIos = false } = {}) {
+function getTemplate(ctx, { withoutAndroidApps = false } = {}) {
     const parsed = yaml.load(config.getConfigContent(MIHOMO_TEMPLATE_FILE)) || {};
     const authOptions = urlAuth.getAuthOptionsForUser(ctx?.user);
 
-    if (forIos && parsed.rules !== undefined) {
+    if (withoutAndroidApps && parsed.rules !== undefined) {
         parsed.rules = stripProcessNameRules(parsed.rules);
     }
 
@@ -82,9 +82,25 @@ function buildClientConfig(template, proxyValue) {
     return clientConfig;
 }
 
-function getSubscriptionLink(ctx, originalLink, type) {
+function buildMultiProxyClientConfig(template, proxies) {
+    const clientConfig = structuredClone(template);
+
+    clientConfig.proxies = proxies.map((proxy) => structuredClone(proxy));
+
+    for (const group of clientConfig['proxy-groups'] || []) {
+        if (group.name === PROXY_GROUP_NAME) {
+            group.proxies = proxies.map((proxy) => proxy.name);
+        }
+    }
+
+    return clientConfig;
+}
+
+function getSubscriptionLink(ctx, originalLink, type, customName = undefined) {
     const encodedLink = encodeURIComponent(originalLink);
-    const connectionName = encodeURIComponent(`${ctx.serverDisplayName()} [${ctx.protocol} ${type}]`);
+    const connectionName = encodeURIComponent(
+        customName || `${ctx.serverDisplayName()} [${ctx.protocol} ${type}]`
+    );
 
     return `clash://install-config?url=${encodedLink}&name=${connectionName}`;
 }
@@ -92,6 +108,7 @@ function getSubscriptionLink(ctx, originalLink, type) {
 export default {
     getTemplate,
     buildClientConfig,
+    buildMultiProxyClientConfig,
     getSubscriptionLink,
     stripProcessNameRules,
     enrichRuleProviders,

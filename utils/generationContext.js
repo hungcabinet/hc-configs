@@ -98,6 +98,10 @@ export class GenerationContext {
         return this.dir('android-clash');
     }
 
+    getWindowsClashDir() {
+        return this.dir('windows-clash');
+    }
+
     getIosDir() {
         return this.dir('ios');
     }

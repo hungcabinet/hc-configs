@@ -31,6 +31,7 @@ const platformPriority = [
     "android",
     "android-clash",
     "windows",
+    "windows-clash",
     "ios",
     "raw"
 ]
@@ -78,11 +79,13 @@ function getPlatformName(platform){
         case "android":
             return "Android (hc-box)";
         case "android-clash":
-            return "Android (Clash Mi) - EXPERIMENTAL!!!";
+            return "Android (Clash Mi)";
         case "ios":
-            return "iOS - EXPERIMENTAL!!!";
+            return "iOS";
         case "windows":
-            return "Windows";
+            return "Windows (Throne VPN)";
+        case "windows-clash":
+            return "Windows (Clash Mi)";
         case "telegram":
             return "Telegram Proxies";
         case "raw":

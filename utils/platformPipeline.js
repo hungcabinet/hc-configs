@@ -101,13 +101,25 @@ function writeAndroidClashMihomo(ctx, payload) {
     androidClash.processAndroidClashConfig(ctx, clientConfig);
 }
 
+function writeWindowsClashMihomo(ctx, payload) {
+    if (!payload.mihomo?.value) {
+        return;
+    }
+
+    const windowsClashCtx = ctx.withPlatform('windows-clash');
+    const template = mihomo.getTemplate(windowsClashCtx, { withoutAndroidApps: true });
+    const clientConfig = mihomo.buildClientConfig(template, payload.mihomo.value);
+
+    androidClash.processWindowsClashConfig(ctx, clientConfig);
+}
+
 function writeIosMihomo(ctx, payload) {
     if (!payload.mihomo?.value) {
         return;
     }
 
     const iosCtx = ctx.withPlatform('ios');
-    const template = mihomo.getTemplate(iosCtx, { forIos: true });
+    const template = mihomo.getTemplate(iosCtx, { withoutAndroidApps: true });
     const clientConfig = mihomo.buildClientConfig(template, payload.mihomo.value);
 
     androidClash.processIosMihomoConfig(ctx, clientConfig);
@@ -213,6 +225,7 @@ const writers = {
     },
     android: { singbox: writeAndroidSingbox },
     'android-clash': { mihomo: writeAndroidClashMihomo },
+    'windows-clash': { mihomo: writeWindowsClashMihomo },
     ios: { copyConf: writeIosCopyConf, mihomo: writeIosMihomo },
     windows: { throneLink: writeWindowsThroneLink, awg: writeWindowsAwg },
     telegram: { proxyLink: writeTelegramProxyLink },

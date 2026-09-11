@@ -18,7 +18,7 @@ function withMihomoRaw(rawFormats, mihomo) {
     return { ...rawFormats, mihomoProxy: true };
 }
 
-function plan({ tunExclude, mihomo, raw, android, androidClash, ios, iosMihomo, windows, telegram }) {
+function plan({ tunExclude, mihomo, raw, android, androidClash, ios, iosMihomo, windows, windowsClash, telegram }) {
     const platforms = {};
 
     if (raw?.outbound !== undefined) {
@@ -49,6 +49,10 @@ function plan({ tunExclude, mihomo, raw, android, androidClash, ios, iosMihomo, 
         platforms.windows = { throneLink: windows.throneLink };
     } else if (windows?.awg) {
         platforms.windows = { awg: true };
+    }
+
+    if (windowsClash && mihomo?.value) {
+        platforms['windows-clash'] = { mihomo: true };
     }
 
     if (telegram) {
@@ -147,6 +151,7 @@ const handlers = [
                         link: vlessParser.fixVlessLink(content, `${serverName} [${protocolCtx.displayProtocol()}]`, 'windows'),
                     },
                 },
+                windowsClash: true,
             }));
         },
     },
@@ -176,6 +181,7 @@ const handlers = [
                 ios: { copyConf: { suffix: 'awg' } },
                 iosMihomo: true,
                 windows: { awg: true },
+                windowsClash: true,
             }));
         },
     },
@@ -254,6 +260,7 @@ const handlers = [
                         ),
                     },
                 },
+                windowsClash: true,
             }));
         },
     },

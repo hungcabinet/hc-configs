@@ -160,6 +160,7 @@ function prepareContextDirs(ctx){
     prepareDir(ctx.getWinDir());
     prepareDir(ctx.getAndroidDir());
     prepareDir(ctx.getAndroidClashDir());
+    prepareDir(ctx.getWindowsClashDir());
     prepareDir(ctx.getIosDir());
     prepareDir(ctx.getRawDir());
 }
