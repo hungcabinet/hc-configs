@@ -141,9 +141,25 @@ function writeIosCopyConf(ctx, payload, file, options) {
     );
 }
 
+function registerThroneSubscription(commonWinCtx, subscriptionFilePath) {
+    webSite.addUserFileLink(
+        commonWinCtx,
+        subscriptionFilePath,
+        'Подписка для Throne',
+        'subscription',
+        ['copy-link', 'open'],
+        (subscriptionUrl) => throne.getSubscriptionLink(subscriptionUrl, 'Hungcabinet (Все прокси)')
+    );
+}
+
 function writeWindowsThroneLink(ctx, payload, file, options) {
     const winCtx = ctx.withPlatform('windows');
     const linkFilePath = path.join(winCtx.dir(), options.linkFileName || `${files.getFileName(winCtx)}.link`);
+    const outboundTag = options.outboundTag || `${ctx.serverDisplayName()} [${ctx.displayProtocol()}]`;
+    const outbound = payload.singbox?.value
+        ? { ...payload.singbox.value, tag: outboundTag }
+        : options.outbound;
+    const addLink = outbound ? throne.getAddLink(outbound) : undefined;
 
     fs.writeFileSync(linkFilePath, options.link);
     webSite.addUserFileLink(
@@ -151,27 +167,22 @@ function writeWindowsThroneLink(ctx, payload, file, options) {
         linkFilePath,
         options.linkLabel || `[${ctx.displayProtocol()}] ссылка для Throne`,
         'link',
-        ['download', 'copy-data']
+        addLink ? ['download', 'copy-data', 'open'] : ['download', 'copy-data'],
+        addLink
     );
 
-    const commonWinDir = ctx.forCommon().withPlatform('windows').dir();
-    const subscriptionFilePath = throne.addLinkToSubscription(commonWinDir, options.link);
     const commonWinCtx = ctx.forCommon().withPlatform('windows');
+    const subscriptionFilePath = throne.addLinkToSubscription(commonWinCtx.dir(), options.link);
 
-    webSite.addUserFileLink(
-        commonWinCtx,
-        subscriptionFilePath,
-        'Подписка для Throne',
-        'subscription',
-        ['copy-link']
-    );
+    registerThroneSubscription(commonWinCtx, subscriptionFilePath);
 }
 
 function writeWindowsAwg(ctx, payload, file) {
     const winCtx = ctx.withPlatform('windows');
     const awgLinkFile = path.join(winCtx.dir(), `${files.getFileName(winCtx, 'awg')}.link`);
-    const commonWinDir = ctx.forCommon().withPlatform('windows').dir();
-    const linkData = throne.addAmneziaSubscription(commonWinDir, payload.parsed, ctx);
+    const commonWinCtx = ctx.forCommon().withPlatform('windows');
+    const linkData = throne.addAmneziaSubscription(commonWinCtx.dir(), payload.parsed, ctx);
+    const addLink = throne.getAddLink(linkData.outbound);
 
     fs.writeFileSync(awgLinkFile, linkData.link);
     webSite.addUserFileLink(
@@ -179,16 +190,11 @@ function writeWindowsAwg(ctx, payload, file) {
         awgLinkFile,
         `[${ctx.displayProtocol()}] ссылка для Throne`,
         'link',
-        ['download', 'copy-data']
+        ['download', 'copy-data', 'open'],
+        addLink
     );
 
-    webSite.addUserFileLink(
-        ctx.forCommon().withPlatform('windows'),
-        linkData.filePath,
-        'Подписка для Throne',
-        'subscription',
-        ['copy-link']
-    );
+    registerThroneSubscription(commonWinCtx, linkData.filePath);
 }
 
 function writeTelegramProxyLink(ctx, payload, file) {

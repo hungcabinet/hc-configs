@@ -78,9 +78,9 @@ function getPlatformName(platform){
         case "android":
             return "Android (hc-box)";
         case "android-clash":
-            return "Android (Clash Mi) - EXPERIMENTAL!!!";
+            return "Android (Clash Mi)";
         case "ios":
-            return "iOS - EXPERIMENTAL!!!";
+            return "iOS";
         case "windows":
             return "Windows";
         case "telegram":
@@ -130,22 +130,49 @@ function getServerData(user, platform, server){
     return result;
 }
 
-function addUserFileLink(ctx, filePath, text, linkType = "common", attributes= ["open"]){
+function addUserFileLink(ctx, filePath, text, linkType = "common", attributes= ["open"], openHref = undefined){
     if (!webConfig.enabled){
         return;
     }
 
-    let baseUrl = webConfig.baseUrl;
-    let url = new URL(baseUrl);
+    const plainUrl = getUserFilePlainUrl(ctx, filePath);
 
-    let relative = files.getRelativeDestinationFilePath(filePath, ctx.user);
+    if (!plainUrl) {
+        return;
+    }
 
-    url.pathname = `/${relative}`;
-
-    return addUserSimpleLink(ctx, url.href, text, linkType, attributes, url.href);
+    return addUserSimpleLink(ctx, plainUrl, text, linkType, attributes, plainUrl, openHref);
 }
 
-function addUserSimpleLink(ctx, link, text, linkType = "common", attributes= ["open"], downloadLink = link){
+function getUserFilePlainUrl(ctx, filePath) {
+    if (!webConfig.enabled){
+        return undefined;
+    }
+
+    let url = new URL(webConfig.baseUrl);
+    url.pathname = `/${files.getRelativeDestinationFilePath(filePath, ctx.user)}`;
+
+    return url.href;
+}
+
+function getUserFileHref(ctx, filePath) {
+    const plainUrl = getUserFilePlainUrl(ctx, filePath);
+
+    if (!plainUrl) {
+        return undefined;
+    }
+
+    let webUser = webConfig.users.find(s => s.userName === ctx.user);
+
+    return urlAuth.embedBasicAuthInLink(
+        plainUrl,
+        webConfig.baseUrl,
+        webUser?.userName,
+        webUser?.password
+    );
+}
+
+function addUserSimpleLink(ctx, link, text, linkType = "common", attributes= ["open"], downloadLink = link, openHref = undefined){
     if (!webConfig.enabled){
         return;
     }
@@ -158,23 +185,31 @@ function addUserSimpleLink(ctx, link, text, linkType = "common", attributes= ["o
         webUser?.password
     );
 
+    const resolvedOpenHref = typeof openHref === 'function' ? openHref(href) : openHref;
+
     let serverData = getServerData(ctx.user, ctx.platform, ctx.server);
 
     if (!serverData.links.some(v => v.href === href && v.text === text && v.linkType === linkType)){
-        serverData.links.push({
+        const entry = {
             href: href,
             download: downloadLink,
             text: text,
             linkType: linkType,
             attributes: attributes,
             path: new URL(href).pathname,
-        });
+        };
+
+        if (resolvedOpenHref) {
+            entry.openHref = resolvedOpenHref;
+        }
+
+        serverData.links.push(entry);
     }
 
     return href;
 }
 
-function addSpecificLink(ctx, link, text, linkType = "common"){
+function addSpecificLink(ctx, link, text, linkType = "common", attributes = ["open"], order = 0){
     if (!webConfig.enabled){
         return;
     }
@@ -187,7 +222,8 @@ function addSpecificLink(ctx, link, text, linkType = "common"){
             download: link,
             text: text,
             linkType: linkType,
-            attributes: ["open"]
+            attributes: attributes,
+            order: order
         });
     }
 }
@@ -227,6 +263,13 @@ async function renderUserIndex(user){
 
                 if (aPriority !== bPriority) {
                     return aPriority - bPriority;
+                }
+
+                const aOrder = a.order ?? 0;
+                const bOrder = b.order ?? 0;
+
+                if (aOrder !== bOrder) {
+                    return aOrder - bOrder;
                 }
 
                 return a.text.localeCompare(b.text, 'ru');
@@ -287,4 +330,4 @@ function writeWebFiles(){
     fs.copyFileSync(adminsManualSourcePath, adminsManualPath);
 }
 
-export default { startCollectData, addUserFileLink, renderUserIndex, addSpecificLink, writeWebFiles, setDevRun};
+export default { startCollectData, addUserFileLink, getUserFileHref, renderUserIndex, addSpecificLink, writeWebFiles, setDevRun};
