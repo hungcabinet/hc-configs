@@ -171,4 +171,24 @@ function parseData(configData, endpoint = undefined, userName, tag = 'proxy') {
     };
 }
 
-export default { source, readConfig, getUsers, parseData };
+function buildMieruLink(parsed, connectionName) {
+    let transport = String(parsed.transport || 'TCP').toUpperCase();
+
+    if (transport !== 'TCP' && transport !== 'UDP') {
+        transport = 'TCP';
+    }
+
+    const url = new URL(`https://${parsed.server}`);
+
+    url.username = parsed.username;
+    url.password = parsed.password;
+    url.searchParams.set('port', String(parsed.serverPort));
+    url.searchParams.set('protocol', transport);
+    url.hash = connectionName;
+
+    return url.href
+        .replace('https://', 'mierus://')
+        .replace(`${parsed.server}/?`, `${parsed.server}?`);
+}
+
+export default { source, readConfig, getUsers, parseData, buildMieruLink };

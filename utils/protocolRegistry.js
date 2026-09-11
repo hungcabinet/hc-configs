@@ -230,6 +230,8 @@ const handlers = [
 
             const mihomoData = mihomo(data);
 
+            const serverName = protocolCtx.serverDisplayName();
+
             platformPipeline.run(protocolCtx, {
                 singbox: { type: 'outbound', value: data.singBoxEntity },
                 mihomo: mihomoData,
@@ -244,6 +246,14 @@ const handlers = [
                 android: true,
                 androidClash: true,
                 iosMihomo: true,
+                windows: {
+                    throneLink: {
+                        link: mieruParser.buildMieruLink(
+                            data.parsed,
+                            `${serverName} [${protocolCtx.displayProtocol()}]`
+                        ),
+                    },
+                },
             }));
         },
     },
