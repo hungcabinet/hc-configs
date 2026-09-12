@@ -69,12 +69,37 @@ async function mainProcess(){
 
         let directRulesPath = path.join(commonServerDest, "windows", "direct-rules.txt");
         let proxyRulesPath = path.join(commonServerDest, "windows", "proxy-rules.txt");
+        let routeProfilePath = path.join(commonServerDest, "windows", "route-profile.json");
 
         fs.writeFileSync(directRulesPath, windowsRules.direct.join("\n").trim());
         fs.writeFileSync(proxyRulesPath, windowsRules.proxy.join("\n").trim());
 
+        const routeProfile = throne.buildRouteProfile(windowsRules, throne.ROUTE_PROFILE_NAME);
+        fs.writeFileSync(routeProfilePath, JSON.stringify(routeProfile, null, 2));
+
         webServer.addUserFileLink(windowsCtx, directRulesPath, "Direct правила маршрутизации", "routing", ["download", "copy-data"]);
         webServer.addUserFileLink(windowsCtx, proxyRulesPath, "Proxy правила маршрутизации", "routing", ["download", "copy-data"]);
+
+        const routeProfileUrl = webServer.getUserFileHref(windowsCtx, routeProfilePath);
+
+        if (routeProfileUrl) {
+            webServer.addSpecificLink(
+                windowsCtx,
+                throne.getRemoteRouteLink([{ url: routeProfileUrl, name: throne.ROUTE_PROFILE_NAME }]),
+                "Подписка на маршрутизацию",
+                "routing",
+                ["open"],
+                1
+            );
+            webServer.addSpecificLink(
+                windowsCtx,
+                throne.getRouteLink(routeProfile),
+                "Добавить маршрутизацию",
+                "routing",
+                ["open"],
+                2
+            );
+        }
 
         await webServer.renderUserIndex(user);
     }

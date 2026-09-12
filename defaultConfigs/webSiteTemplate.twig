@@ -62,7 +62,7 @@
                     {% if attribute == 'download' %}<a href="{{ link.href }}" download>[Скачать]</a>
                     {% elseif attribute == 'copy-data' %}<a class="copy-content" data-link="{{ link.download }}" href="javascript:void(0)">[Копировать данные]</a>
                     {% elseif attribute == 'copy-link' %}<a class="copy-link" data-link="{{ link.href }}" href="javascript:void(0)">[Копировать ссылку]</a>
-                    {% else %}<a href="{{ link.href }}">[Открыть]</a>
+                    {% else %}<a href="{{ link.openHref|default(link.href) }}">[Открыть]</a>
                     {% endif %}
                     {% endfor %}
                 </div>
