@@ -259,6 +259,34 @@ function buildAmneziaOutbound(amneziaData, ctx) {
         if (amneziaData.interface.awg.I5 !== undefined){
             linkObj["amnezia_wg"]["i5"] = amneziaData.interface.awg.I5;
         }
+
+        if (amneziaData.interface.awg.HeaderProtectionKey !== undefined){
+            linkObj["amnezia_wg"]["header_protection_key"] = amneziaData.interface.awg.HeaderProtectionKey;
+        }
+        if (amneziaData.interface.awg.ContentPaddingAddition !== undefined){
+            linkObj["amnezia_wg"]["content_padding_addition"] = amneziaData.interface.awg.ContentPaddingAddition;
+        }
+        if (amneziaData.interface.awg.RekeyAfterTime !== undefined){
+            linkObj["amnezia_wg"]["rekey_after_time"] = amneziaData.interface.awg.RekeyAfterTime;
+        }
+        if (amneziaData.interface.awg.RekeyTimeout !== undefined){
+            linkObj["amnezia_wg"]["rekey_timeout"] = amneziaData.interface.awg.RekeyTimeout;
+        }
+        if (amneziaData.interface.awg.RejectAfterTime !== undefined){
+            linkObj["amnezia_wg"]["reject_after_time"] = amneziaData.interface.awg.RejectAfterTime;
+        }
+        if (amneziaData.interface.awg.KeepaliveTimeout !== undefined){
+            linkObj["amnezia_wg"]["keepalive_timeout"] = amneziaData.interface.awg.KeepaliveTimeout;
+        }
+        if (amneziaData.interface.awg.MaxHandshakeAttempts !== undefined){
+            linkObj["amnezia_wg"]["max_handshake_attempts"] = amneziaData.interface.awg.MaxHandshakeAttempts;
+        }
+        if (amneziaData.interface.awg.RandomTrailers){
+            linkObj["amnezia_wg"]["random_trailers"] = true;
+        }
+        if (amneziaData.interface.awg.DisableCookies){
+            linkObj["amnezia_wg"]["disable_cookies"] = true;
+        }
     }
 
     if (amneziaData.interface.mtu !== undefined){
