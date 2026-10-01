@@ -110,6 +110,12 @@ function convertToSingBoxEntity(parsed, tag, domainResolver) {
     return entity;
 }
 
+function normalizeInterfaceAddress(addr) {
+    if (addr.includes('/')) return addr;
+    if (/^\d{1,3}(\.\d{1,3}){3}$/.test(addr)) return `${addr}/32`;
+    return addr;
+}
+
 function pickAddressByVersion(addresses, version) {
     return addresses.find((addr) => {
         const host = addr.split('/')[0];
@@ -485,7 +491,7 @@ function parseData(configString, tag = 'proxy', domainResolver = 'google') {
             addressList =
                 interfaceSection.Address
                     .split(',')
-                    .map(a => a.trim())
+                    .map(a => normalizeInterfaceAddress(a.trim()))
                     .filter(Boolean);
         } else {
             warnings.push(
