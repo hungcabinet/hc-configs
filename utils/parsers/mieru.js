@@ -2,6 +2,13 @@ import fs from 'fs';
 
 import yaml from 'js-yaml';
 
+const MULTIPLEXING_LEVELS = new Set([
+    'MULTIPLEXING_OFF',
+    'MULTIPLEXING_LOW',
+    'MULTIPLEXING_MIDDLE',
+    'MULTIPLEXING_HIGH',
+]);
+
 const source = {
     layout: 'server-shared',
     pattern: /^(mieru|mihomo).*\.(yaml|yml)$/i,
@@ -72,6 +79,10 @@ function convertToSingBoxEntity(warnings, convertErrors, parsed, tag) {
         singBoxEntity.traffic_pattern = parsed.trafficPattern;
     }
 
+    if (parsed.multiplexing) {
+        singBoxEntity.multiplexing = parsed.multiplexing;
+    }
+
     return singBoxEntity;
 }
 
@@ -99,6 +110,10 @@ function convertToMihomoEntity(warnings, convertErrors, parsed, tag){
 
     if (parsed.trafficPattern !== undefined) {
         mihomoEntity["traffic-pattern"] = parsed.trafficPattern;
+    }
+
+    if (parsed.multiplexing) {
+        mihomoEntity.multiplexing = parsed.multiplexing;
     }
 
     return mihomoEntity;
@@ -139,6 +154,11 @@ function parseData(configData, endpoint = undefined, userName, listener, tag = '
         parseErrors.push('Поле traffic-pattern должно быть строкой');
     }
 
+    const multiplexing = listener?.multiplexing;
+    if (multiplexing !== undefined && (typeof multiplexing !== 'string' || !MULTIPLEXING_LEVELS.has(multiplexing))) {
+        parseErrors.push(`Поле multiplexing должно быть одним из: ${[...MULTIPLEXING_LEVELS].join(', ')}`);
+    }
+
     if (parseErrors.length > 0) {
         return { success: false, warnings, errors: parseErrors };
     }
@@ -150,6 +170,7 @@ function parseData(configData, endpoint = undefined, userName, listener, tag = '
         password,
         transport: listener?.transport,
         trafficPattern,
+        multiplexing,
         tunExclude: /^\d{1,3}(\.\d{1,3}){3}$/.test(server) ? [`${server}/32`] : [],
     };
 
@@ -184,6 +205,15 @@ function buildMieruLink(parsed, connectionName) {
     url.password = parsed.password;
     url.searchParams.set('port', String(parsed.serverPort));
     url.searchParams.set('protocol', transport);
+
+    if (typeof parsed.trafficPattern === 'string' && parsed.trafficPattern !== '') {
+        url.searchParams.set('traffic-pattern', parsed.trafficPattern);
+    }
+
+    if (parsed.multiplexing) {
+        url.searchParams.set('multiplexing', parsed.multiplexing);
+    }
+
     url.hash = connectionName;
 
     return url.href
