@@ -15,6 +15,11 @@ const AWG_V3_KEYS = [
     'DisableCookies',
 ];
 
+const AWG_V31_KEYS = [
+    'RandomTrailers',
+    'DisableCookies',
+];
+
 function formatKeepalive(value) {
     if (value === undefined) return undefined;
     const trimmed = value.trim();
@@ -33,8 +38,24 @@ function parseAmneziaBool(value) {
     return { ok: false, value: false };
 }
 
+function hasAwgKey(awgParams, key) {
+    return awgParams[key] !== undefined && awgParams[key] !== false;
+}
+
 function hasAwgV3Keys(awgParams) {
-    return AWG_V3_KEYS.some((key) => awgParams[key] !== undefined && awgParams[key] !== false);
+    return AWG_V3_KEYS.some((key) => hasAwgKey(awgParams, key));
+}
+
+function getVersionDisplayNote(awgParams = {}) {
+    if (AWG_V31_KEYS.some((key) => hasAwgKey(awgParams, key))) {
+        return 'AmneziaWG 3.1';
+    }
+
+    if (AWG_V3_KEYS.some((key) => hasAwgKey(awgParams, key))) {
+        return 'AmneziaWG 3.0';
+    }
+
+    return 'AmneziaWG 2.0';
 }
 
 function convertToSingBoxEntity(parsed, tag, domainResolver) {
@@ -548,4 +569,4 @@ function parseData(configString, tag = 'proxy', domainResolver = 'google') {
     }
 }
 
-export default { source, parseData };
+export default { source, parseData, getVersionDisplayNote };

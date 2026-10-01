@@ -5,9 +5,55 @@ const source = {
     pattern: /^vless.*\.link$/i,
 };
 
+function normalizeTransportType(type) {
+    return String(type || 'tcp').toLowerCase();
+}
+
+function getTransportDisplayNote(type) {
+    const value = normalizeTransportType(type);
+
+    if (value === 'tcp') {
+        return 'TCP транспорт';
+    }
+
+    if (value === 'xhttp') {
+        return 'XHTTP транспорт';
+    }
+
+    return undefined;
+}
+
+function isSupportedTransport(type) {
+    const value = normalizeTransportType(type);
+    return value === 'tcp' || value === 'xhttp';
+}
+
+function unsupportedTransportError(type) {
+    return `type=${type} — данный конфигуратор поддерживает только tcp и xhttp транспорт`;
+}
+
+function buildXhttpOptions(parsed) {
+    const options = {};
+
+    if (parsed.path) {
+        options.path = parsed.path;
+    }
+
+    if (parsed.host) {
+        options.host = parsed.host;
+    }
+
+    if (parsed.mode) {
+        options.mode = parsed.mode;
+    }
+
+    return options;
+}
+
 function convertToSingBoxEntity(warnings, convertErrors, parsed, tag, domainResolver) {
     const { uuid, address, port, security, type, flow, fp, sni, pbk, sid } = parsed;
     const isReality = security === 'reality';
+    const transportType = normalizeTransportType(type);
 
     if (security !== 'reality' && security !== 'tls' && security !== 'none') {
         warnings.push(`security=${security} — sing-box лучше всего работает с reality или tls`);
@@ -17,8 +63,8 @@ function convertToSingBoxEntity(warnings, convertErrors, parsed, tag, domainReso
         convertErrors.push(`flow=${flow} не поддерживается в sing-box. Поддерживается только "xtls-rprx-vision" или пустое значение.`);
     }
 
-    if (type !== 'tcp') {
-        convertErrors.push(`type=${type} — данный конфигуратор поддерживает только tcp транспорт`);
+    if (!isSupportedTransport(type)) {
+        convertErrors.push(unsupportedTransportError(type));
     }
 
     if (convertErrors.length > 0) {
@@ -31,10 +77,16 @@ function convertToSingBoxEntity(warnings, convertErrors, parsed, tag, domainReso
         server: address,
         server_port: port,
         uuid,
-        flow: flow || undefined,
+        flow: transportType === 'xhttp' ? undefined : (flow || undefined),
         packet_encoding: "xudp",
-        network: type === 'tcp' ? undefined : type,
     };
+
+    if (transportType === 'xhttp') {
+        singBoxEntity.transport = {
+            type: 'xhttp',
+            ...buildXhttpOptions(parsed),
+        };
+    }
 
     const tls = {
         enabled: true,
@@ -59,12 +111,8 @@ function convertToSingBoxEntity(warnings, convertErrors, parsed, tag, domainReso
     //     singBoxEntity.domain_resolver = domainResolver;
     // }
 
-    if (isReality && flow !== 'xtls-rprx-vision') {
+    if (isReality && transportType === 'tcp' && flow !== 'xtls-rprx-vision') {
         warnings.push('Reality рекомендуется использовать вместе с flow=xtls-rprx-vision');
-    }
-
-    if (type !== 'tcp' && isReality) {
-        warnings.push('Reality + WebSocket/gRPC может работать нестабильно в sing-box. Лучше использовать tcp.');
     }
 
     return singBoxEntity;
@@ -73,6 +121,7 @@ function convertToSingBoxEntity(warnings, convertErrors, parsed, tag, domainReso
 function convertToMihomoEntity(warnings, convertErrors, parsed, tag) {
     const { uuid, address, port, security, type, flow, fp, sni, pbk, sid } = parsed;
     const isReality = security === 'reality';
+    const transportType = normalizeTransportType(type);
 
     if (security !== 'reality' && security !== 'tls' && security !== 'none') {
         warnings.push(`security=${security} — mihomo лучше всего работает с reality или tls`);
@@ -82,8 +131,8 @@ function convertToMihomoEntity(warnings, convertErrors, parsed, tag) {
         convertErrors.push(`flow=${flow} не поддерживается в mihomo. Поддерживается только "xtls-rprx-vision" или пустое значение.`);
     }
 
-    if (type !== 'tcp') {
-        convertErrors.push(`type=${type} — данный конфигуратор поддерживает только tcp транспорт`);
+    if (!isSupportedTransport(type)) {
+        convertErrors.push(unsupportedTransportError(type));
     }
 
     if (convertErrors.length > 0) {
@@ -97,13 +146,21 @@ function convertToMihomoEntity(warnings, convertErrors, parsed, tag) {
         port: port,
         udp: true,
         uuid,
-        flow: flow || undefined,
+        flow: transportType === 'xhttp' ? undefined : (flow || undefined),
         "packet-encoding": "xudp",
-        network: type === 'tcp' ? undefined : type,
         tls: true,
         servername: sni || (isReality ? 'www.microsoft.com' : address),
         "client-fingerprint": fp
     };
+
+    if (transportType === 'xhttp') {
+        mihomoEntity.network = 'xhttp';
+        const xhttpOpts = buildXhttpOptions(parsed);
+
+        if (Object.keys(xhttpOpts).length > 0) {
+            mihomoEntity['xhttp-opts'] = xhttpOpts;
+        }
+    }
 
     if (isReality) {
         mihomoEntity["reality-opts"] ={
@@ -150,6 +207,9 @@ function parseInput(vlessLink, defaultFingerPrint, warnings, parseErrors) {
     const sni = params.get('sni') || params.get('servername') || '';
     const pbk = params.get('pbk') || '';
     const sid = params.get('sid') || '';
+    const path = params.get('path') || '';
+    const host = params.get('host') || '';
+    const mode = params.get('mode') || '';
 
     const isReality = security === 'reality';
     if (isReality && !pbk) {
@@ -162,7 +222,7 @@ function parseInput(vlessLink, defaultFingerPrint, warnings, parseErrors) {
     }
 
     return {
-        uuid, address, port, security, type, flow, fp, sni, pbk, sid, remarks
+        uuid, address, port, security, type, flow, fp, sni, pbk, sid, path, host, mode, remarks
     };
 }
 
@@ -230,4 +290,4 @@ function fixVlessLink(vlessLink, customName = undefined, platform = 'windows'){
     return link;
 }
 
-export default { source, parseData, fixVlessLink };
+export default { source, parseData, fixVlessLink, getTransportDisplayNote };

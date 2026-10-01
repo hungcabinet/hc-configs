@@ -172,6 +172,10 @@ function getUserFileHref(ctx, filePath) {
     );
 }
 
+function withDisplayNote(ctx, text) {
+    return ctx.displayNote ? `${text} (${ctx.displayNote})` : text;
+}
+
 function addUserSimpleLink(ctx, link, text, linkType = "common", attributes= ["open"], downloadLink = link, openHref = undefined){
     if (!webConfig.enabled){
         return;
@@ -186,14 +190,15 @@ function addUserSimpleLink(ctx, link, text, linkType = "common", attributes= ["o
     );
 
     const resolvedOpenHref = typeof openHref === 'function' ? openHref(href) : openHref;
+    const linkText = withDisplayNote(ctx, text);
 
     let serverData = getServerData(ctx.user, ctx.platform, ctx.server);
 
-    if (!serverData.links.some(v => v.href === href && v.text === text && v.linkType === linkType)){
+    if (!serverData.links.some(v => v.href === href && v.text === linkText && v.linkType === linkType)){
         const entry = {
             href: href,
             download: downloadLink,
-            text: text,
+            text: linkText,
             linkType: linkType,
             attributes: attributes,
             path: new URL(href).pathname,
@@ -214,13 +219,14 @@ function addSpecificLink(ctx, link, text, linkType = "common", attributes = ["op
         return;
     }
 
+    const linkText = withDisplayNote(ctx, text);
     let serverData = getServerData(ctx.user, ctx.platform, ctx.server);
 
-    if (!serverData.links.some(v => v.href === link && v.text === text && v.linkType === linkType)){
+    if (!serverData.links.some(v => v.href === link && v.text === linkText && v.linkType === linkType)){
         serverData.links.push({
             href: link,
             download: link,
-            text: text,
+            text: linkText,
             linkType: linkType,
             attributes: attributes,
             order: order
