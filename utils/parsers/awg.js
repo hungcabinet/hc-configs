@@ -3,11 +3,66 @@ const source = {
     pattern: /^awg.*\.conf$/i,
 };
 
+const AWG_V3_KEYS = [
+    'HeaderProtectionKey',
+    'ContentPaddingAddition',
+    'RekeyAfterTime',
+    'RekeyTimeout',
+    'RejectAfterTime',
+    'KeepaliveTimeout',
+    'MaxHandshakeAttempts',
+    'RandomTrailers',
+    'DisableCookies',
+];
+
+const AWG_V31_KEYS = [
+    'RandomTrailers',
+    'DisableCookies',
+];
+
+function formatKeepalive(value) {
+    if (value === undefined) return undefined;
+    const trimmed = value.trim();
+    if (/^\d+$/.test(trimmed)) return parseInt(trimmed, 10);
+    return trimmed;
+}
+
+function parseAmneziaBool(value) {
+    const trimmed = value.trim().toLowerCase();
+    if (trimmed === 'true' || trimmed === '1' || trimmed === 'on' || trimmed === 'yes') {
+        return { ok: true, value: true };
+    }
+    if (trimmed === 'false' || trimmed === '0' || trimmed === 'off' || trimmed === 'no') {
+        return { ok: true, value: false };
+    }
+    return { ok: false, value: false };
+}
+
+function hasAwgKey(awgParams, key) {
+    return awgParams[key] !== undefined && awgParams[key] !== false;
+}
+
+function hasAwgV3Keys(awgParams) {
+    return AWG_V3_KEYS.some((key) => hasAwgKey(awgParams, key));
+}
+
+function getVersionDisplayNote(awgParams = {}) {
+    if (AWG_V31_KEYS.some((key) => hasAwgKey(awgParams, key))) {
+        return 'AmneziaWG 3.1';
+    }
+
+    if (AWG_V3_KEYS.some((key) => hasAwgKey(awgParams, key))) {
+        return 'AmneziaWG 3.0';
+    }
+
+    return 'AmneziaWG 2.0';
+}
+
 function convertToSingBoxEntity(parsed, tag, domainResolver) {
     const { interface: iface, peers } = parsed;
     const awgParams = iface.awg;
 
-    return {
+    const entity = {
         address: iface.address,
         private_key: iface.privateKey,
         tag,
@@ -39,11 +94,47 @@ function convertToSingBoxEntity(parsed, tag, domainResolver) {
             address: peer.endpointHost,
             port: peer.endpointPort,
             allowed_ips: peer.allowedIPsList,
-            persistent_keepalive_interval: parseInt(peer.PersistentKeepalive),
+            persistent_keepalive_interval: formatKeepalive(peer.PersistentKeepalive),
             preshared_key: peer.PresharedKey,
             public_key: peer.PublicKey,
         }))
     };
+
+    if (awgParams.HeaderProtectionKey !== undefined) {
+        entity.header_protection_key = awgParams.HeaderProtectionKey;
+    }
+    if (awgParams.ContentPaddingAddition !== undefined) {
+        entity.content_padding_addition = awgParams.ContentPaddingAddition;
+    }
+    if (awgParams.RekeyAfterTime !== undefined) {
+        entity.rekey_after_time = awgParams.RekeyAfterTime;
+    }
+    if (awgParams.RekeyTimeout !== undefined) {
+        entity.rekey_timeout = awgParams.RekeyTimeout;
+    }
+    if (awgParams.RejectAfterTime !== undefined) {
+        entity.reject_after_time = awgParams.RejectAfterTime;
+    }
+    if (awgParams.KeepaliveTimeout !== undefined) {
+        entity.keepalive_timeout = awgParams.KeepaliveTimeout;
+    }
+    if (awgParams.MaxHandshakeAttempts !== undefined) {
+        entity.max_handshake_attempts = awgParams.MaxHandshakeAttempts;
+    }
+    if (awgParams.RandomTrailers) {
+        entity.random_trailers = true;
+    }
+    if (awgParams.DisableCookies) {
+        entity.disable_cookies = true;
+    }
+
+    return entity;
+}
+
+function normalizeInterfaceAddress(addr) {
+    if (addr.includes('/')) return addr;
+    if (/^\d{1,3}(\.\d{1,3}){3}$/.test(addr)) return `${addr}/32`;
+    return addr;
 }
 
 function pickAddressByVersion(addresses, version) {
@@ -60,6 +151,59 @@ function convertMihomoEntity(parsed, tag) {
     const ip = pickAddressByVersion(iface.address, 4);
     const ipv6 = pickAddressByVersion(iface.address, 6);
 
+    const amneziaOption = {
+        jc: awgParams.Jc,
+        jmin: awgParams.Jmin,
+        jmax: awgParams.Jmax,
+
+        h1: awgParams.H1,
+        h2: awgParams.H2,
+        h3: awgParams.H3,
+        h4: awgParams.H4,
+
+        s1: awgParams.S1,
+        s2: awgParams.S2,
+        s3: awgParams.S3,
+        s4: awgParams.S4,
+
+        i1: awgParams.I1,
+        i2: awgParams.I2,
+        i3: awgParams.I3,
+        i4: awgParams.I4,
+        i5: awgParams.I5,
+    };
+
+    if (hasAwgV3Keys(awgParams)) {
+        amneziaOption.version = 3;
+    }
+    if (awgParams.HeaderProtectionKey !== undefined) {
+        amneziaOption['header-protection-key'] = awgParams.HeaderProtectionKey;
+    }
+    if (awgParams.ContentPaddingAddition !== undefined) {
+        amneziaOption['content-padding-addition'] = awgParams.ContentPaddingAddition;
+    }
+    if (awgParams.RekeyAfterTime !== undefined) {
+        amneziaOption['rekey-after-time'] = awgParams.RekeyAfterTime;
+    }
+    if (awgParams.RekeyTimeout !== undefined) {
+        amneziaOption['rekey-timeout'] = awgParams.RekeyTimeout;
+    }
+    if (awgParams.RejectAfterTime !== undefined) {
+        amneziaOption['reject-after-time'] = awgParams.RejectAfterTime;
+    }
+    if (awgParams.KeepaliveTimeout !== undefined) {
+        amneziaOption['keepalive-timeout'] = awgParams.KeepaliveTimeout;
+    }
+    if (awgParams.MaxHandshakeAttempts !== undefined) {
+        amneziaOption['max-handshake-attempts'] = awgParams.MaxHandshakeAttempts;
+    }
+    if (awgParams.RandomTrailers) {
+        amneziaOption['random-trailers'] = true;
+    }
+    if (awgParams.DisableCookies) {
+        amneziaOption['disable-cookies'] = true;
+    }
+
     const entity = {
         name: tag,
         type: "wireguard",
@@ -72,31 +216,11 @@ function convertMihomoEntity(parsed, tag) {
             "public-key": peer.PublicKey,
             "pre-shared-key": peer.PresharedKey,
             "allowed-ips": peer.allowedIPsList,
-            "persistent-keepalive": parseInt(peer.PersistentKeepalive),
+            "persistent-keepalive": formatKeepalive(peer.PersistentKeepalive),
         })),
         udp: true,
         mtu: iface.mtu,
-        "amnezia-wg-option": {
-            jc: awgParams.Jc,
-            jmin: awgParams.Jmin,
-            jmax: awgParams.Jmax,
-
-            h1: awgParams.H1,
-            h2: awgParams.H2,
-            h3: awgParams.H3,
-            h4: awgParams.H4,
-
-            s1: awgParams.S1,
-            s2: awgParams.S2,
-            s3: awgParams.S3,
-            s4: awgParams.S4,
-
-            i1: awgParams.I1,
-            i2: awgParams.I2,
-            i3: awgParams.I3,
-            i4: awgParams.I4,
-            i5: awgParams.I5,
-        }
+        "amnezia-wg-option": amneziaOption,
     };
 
     return entity;
@@ -301,7 +425,18 @@ function parseData(configString, tag = 'proxy', domainResolver = 'google') {
             'I2': "string",
             'I3': "string",
             'I4': "string",
-            'I5': "string"
+            'I5': "string",
+
+            'HeaderProtectionKey': "string",
+            'ContentPaddingAddition': "string",
+            'RekeyAfterTime': "string",
+            'RekeyTimeout': "string",
+            'RejectAfterTime': "string",
+            'KeepaliveTimeout': "string",
+            'MaxHandshakeAttempts': "string",
+
+            'RandomTrailers': "bool",
+            'DisableCookies': "bool",
         };
 
         for (const key in awgKeys) {
@@ -326,6 +461,16 @@ function parseData(configString, tag = 'proxy', domainResolver = 'google') {
                     case "string":
                         awgParams[key] = interfaceSection[key];
                         break;
+                    case "bool": {
+                        const parsedBool = parseAmneziaBool(interfaceSection[key]);
+                        if (!parsedBool.ok) {
+                            warnings.push(
+                                `${key}: неизвестное bool-значение "${interfaceSection[key]}"`
+                            );
+                        }
+                        awgParams[key] = parsedBool.value;
+                        break;
+                    }
                 }
             }
         }
@@ -367,7 +512,7 @@ function parseData(configString, tag = 'proxy', domainResolver = 'google') {
             addressList =
                 interfaceSection.Address
                     .split(',')
-                    .map(a => a.trim())
+                    .map(a => normalizeInterfaceAddress(a.trim()))
                     .filter(Boolean);
         } else {
             warnings.push(
@@ -424,4 +569,4 @@ function parseData(configString, tag = 'proxy', domainResolver = 'google') {
     }
 }
 
-export default { source, parseData };
+export default { source, parseData, getVersionDisplayNote };

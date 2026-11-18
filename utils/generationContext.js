@@ -3,52 +3,45 @@ import config from './config.js';
 import files from './files.js';
 
 export class GenerationContext {
-    constructor({ user, server, protocol = 'common', platform = 'unknown', profileId = undefined }) {
+    constructor({ user, server, protocol = 'common', platform = 'unknown', profileId = undefined, displayNote = undefined }) {
         this.user = user;
         this.server = server;
         this.protocol = protocol;
         this.platform = platform;
         this.profileId = profileId;
+        this.displayNote = displayNote;
+    }
+
+    copy(overrides = {}) {
+        return new GenerationContext({
+            user: this.user,
+            server: this.server,
+            protocol: this.protocol,
+            platform: this.platform,
+            profileId: this.profileId,
+            displayNote: this.displayNote,
+            ...overrides,
+        });
     }
 
     withProfile(profileId) {
-        return new GenerationContext({
-            user: this.user,
-            server: this.server,
-            protocol: this.protocol,
-            platform: this.platform,
-            profileId,
-        });
+        return this.copy({ profileId });
     }
 
     withProtocol(protocol) {
-        return new GenerationContext({
-            user: this.user,
-            server: this.server,
-            protocol,
-            platform: this.platform,
-            profileId: this.profileId,
-        });
+        return this.copy({ protocol });
     }
 
     withPlatform(platform) {
-        return new GenerationContext({
-            user: this.user,
-            server: this.server,
-            protocol: this.protocol,
-            platform,
-            profileId: this.profileId,
-        });
+        return this.copy({ platform });
+    }
+
+    withDisplayNote(displayNote) {
+        return this.copy({ displayNote });
     }
 
     forCommon() {
-        return new GenerationContext({
-            user: this.user,
-            server: 'common',
-            protocol: this.protocol,
-            platform: this.platform,
-            profileId: this.profileId,
-        });
+        return this.copy({ server: 'common', displayNote: undefined });
     }
 
     displayProtocol() {

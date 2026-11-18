@@ -209,6 +209,20 @@ function writeWindowsAwg(ctx, payload, file) {
     registerThroneSubscription(commonWinCtx, linkData.filePath);
 }
 
+function telegramProxyLabel(link) {
+    const trimmed = link.trim().toLowerCase();
+
+    if (trimmed.startsWith('tg://webproxy')) {
+        return 'Telegram proxy (webproxy)';
+    }
+
+    if (trimmed.startsWith('tg://proxy')) {
+        return 'Telegram proxy (mtproto)';
+    }
+
+    return 'Telegram proxy';
+}
+
 function writeTelegramProxyLink(ctx, payload, file) {
     const link = fs.readFileSync(file.path, 'utf-8');
     const telegramCtx = ctx.withProtocol('telegram').withPlatform('telegram');
@@ -218,7 +232,7 @@ function writeTelegramProxyLink(ctx, payload, file) {
     webSite.addSpecificLink(
         telegramCtx,
         link,
-        `[${telegramCtx.displayProtocol()}] Telegram proxy`,
+        `[${telegramCtx.displayProtocol()}] ${telegramProxyLabel(link)}`,
         'telegram'
     );
 }

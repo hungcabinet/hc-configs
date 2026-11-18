@@ -2,6 +2,13 @@ import fs from 'fs';
 
 import yaml from 'js-yaml';
 
+const MULTIPLEXING_LEVELS = new Set([
+    'MULTIPLEXING_OFF',
+    'MULTIPLEXING_LOW',
+    'MULTIPLEXING_MIDDLE',
+    'MULTIPLEXING_HIGH',
+]);
+
 const source = {
     layout: 'server-shared',
     pattern: /^(mieru|mihomo).*\.(yaml|yml)$/i,
@@ -18,6 +25,24 @@ function readConfig(configPath) {
 function getMieruListeners(configData) {
     const listeners = Array.isArray(configData?.listeners) ? configData.listeners : [];
     return listeners.filter(listener => String(listener?.type || '').toLowerCase() === 'mieru');
+}
+
+function getListenerName(listener) {
+    return typeof listener?.name === 'string' ? listener.name.trim() : '';
+}
+
+function getTransportDisplayNote(transport) {
+    const value = String(transport || 'TCP').toUpperCase();
+    return value === 'UDP' ? 'UDP транспорт' : 'TCP транспорт';
+}
+
+function getListenerUserPassword(listener, userName) {
+    const users = listener?.users && typeof listener.users === 'object'
+        ? listener.users
+        : {};
+    const password = users[userName];
+
+    return typeof password === 'string' && password !== '' ? password : undefined;
 }
 
 function getUsers(configData) {
@@ -54,6 +79,10 @@ function convertToSingBoxEntity(warnings, convertErrors, parsed, tag) {
         singBoxEntity.traffic_pattern = parsed.trafficPattern;
     }
 
+    if (parsed.multiplexing) {
+        singBoxEntity.multiplexing = parsed.multiplexing;
+    }
+
     return singBoxEntity;
 }
 
@@ -83,43 +112,32 @@ function convertToMihomoEntity(warnings, convertErrors, parsed, tag){
         mihomoEntity["traffic-pattern"] = parsed.trafficPattern;
     }
 
+    if (parsed.multiplexing) {
+        mihomoEntity.multiplexing = parsed.multiplexing;
+    }
+
     return mihomoEntity;
 }
 
-function parseData(configData, endpoint = undefined, userName, tag = 'proxy') {
+function parseData(configData, endpoint = undefined, userName, listener, tag = 'proxy') {
     const warnings = [];
     const parseErrors = [];
-    const userProfiles = getMieruListeners(configData).flatMap(listener => {
-        const users = listener?.users && typeof listener.users === 'object'
-            ? listener.users
-            : {};
-        const password = users[userName];
+    const listenerName = getListenerName(listener);
 
-        if (typeof password !== 'string' || password === '') {
-            return [];
-        }
+    if (!listenerName) {
+        parseErrors.push('Не заполнено поле name у листенера mieru');
+    }
 
-        return [{
-            ...listener,
-            username: userName,
-            password
-        }];
-    });
+    const password = getListenerUserPassword(listener, userName);
 
-    if (userProfiles.length === 0) {
+    if (!password) {
         parseErrors.push(`Mieru профиль для пользователя '${userName}' не найден`);
         return { success: false, warnings, errors: parseErrors };
     }
 
-    if (userProfiles.length > 1) {
-        warnings.push(`Найдено несколько mieru-профилей для '${userName}', используется первый`);
-    }
-
-    const profile = userProfiles[0];
-    const server = endpoint || profile?.listen;
-    const serverPort = Number.parseInt(profile?.port, 10);
-    const username = profile?.username;
-    const password = profile?.password;
+    const server = endpoint || listener?.listen;
+    const serverPort = Number.parseInt(listener?.port, 10);
+    const username = userName;
 
     if (!server) {
         parseErrors.push('IP эндпоинт не задан и не найдено поле listen');
@@ -130,13 +148,15 @@ function parseData(configData, endpoint = undefined, userName, tag = 'proxy') {
     if (!username) {
         parseErrors.push('Не заполнено поле username');
     }
-    if (!password) {
-        parseErrors.push('Не заполнено поле password');
-    }
 
-    const trafficPattern = profile['traffic-pattern'] ?? profile.traffic_pattern;
+    const trafficPattern = listener?.['traffic-pattern'] ?? listener?.traffic_pattern;
     if (trafficPattern !== undefined && typeof trafficPattern !== 'string') {
         parseErrors.push('Поле traffic-pattern должно быть строкой');
+    }
+
+    const multiplexing = listener?.multiplexing;
+    if (multiplexing !== undefined && (typeof multiplexing !== 'string' || !MULTIPLEXING_LEVELS.has(multiplexing))) {
+        parseErrors.push(`Поле multiplexing должно быть одним из: ${[...MULTIPLEXING_LEVELS].join(', ')}`);
     }
 
     if (parseErrors.length > 0) {
@@ -148,8 +168,9 @@ function parseData(configData, endpoint = undefined, userName, tag = 'proxy') {
         serverPort,
         username,
         password,
-        transport: profile?.transport,
+        transport: listener?.transport,
         trafficPattern,
+        multiplexing,
         tunExclude: /^\d{1,3}(\.\d{1,3}){3}$/.test(server) ? [`${server}/32`] : [],
     };
 
@@ -184,6 +205,15 @@ function buildMieruLink(parsed, connectionName) {
     url.password = parsed.password;
     url.searchParams.set('port', String(parsed.serverPort));
     url.searchParams.set('protocol', transport);
+
+    if (typeof parsed.trafficPattern === 'string' && parsed.trafficPattern !== '') {
+        url.searchParams.set('traffic-pattern', parsed.trafficPattern);
+    }
+
+    if (parsed.multiplexing) {
+        url.searchParams.set('multiplexing', parsed.multiplexing);
+    }
+
     url.hash = connectionName;
 
     return url.href
@@ -191,4 +221,14 @@ function buildMieruLink(parsed, connectionName) {
         .replace(`${parsed.server}/?`, `${parsed.server}?`);
 }
 
-export default { source, readConfig, getUsers, parseData, buildMieruLink };
+export default {
+    source,
+    readConfig,
+    getUsers,
+    getMieruListeners,
+    getListenerName,
+    getListenerUserPassword,
+    getTransportDisplayNote,
+    parseData,
+    buildMieruLink,
+};

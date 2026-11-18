@@ -115,7 +115,6 @@ const handlers = [
     {
         ...handlerMeta('vless', vlessParser),
         generate(ctx, file) {
-            const protocolCtx = ctx.withProtocol('vless');
             const content = fs.readFileSync(file.path, 'utf-8');
             const data = vlessParser.parseData(content);
 
@@ -123,6 +122,9 @@ const handlers = [
                 return;
             }
 
+            const protocolCtx = ctx
+                .withProtocol('vless')
+                .withDisplayNote(vlessParser.getTransportDisplayNote(data.parsed.type));
             const serverName = protocolCtx.serverDisplayName();
             const mihomoData = mihomo(data);
 
@@ -159,13 +161,15 @@ const handlers = [
     {
         ...handlerMeta('awg', awgParser),
         generate(ctx, file) {
-            const protocolCtx = ctx.withProtocol('awg');
             const data = awgParser.parseData(fs.readFileSync(file.path, 'utf-8'));
 
             if (!acceptSingbox('awg', file, data)) {
                 return;
             }
 
+            const protocolCtx = ctx
+                .withProtocol('awg')
+                .withDisplayNote(awgParser.getVersionDisplayNote(data.parsed?.interface?.awg));
             const mihomoData = mihomo(data);
 
             platformPipeline.run(protocolCtx, {
@@ -225,43 +229,73 @@ const handlers = [
     {
         ...handlerMeta('mieru', mieruParser),
         generate(ctx, file) {
-            const protocolCtx = ctx.withProtocol('mieru');
             const configData = mieruParser.readConfig(file.path);
             const mieruConfig = config.getVpnServerConfig(ctx.server).mieru || {};
-            const data = mieruParser.parseData(configData, mieruConfig.ip, ctx.user);
+            const listeners = mieruParser.getMieruListeners(configData);
 
-            if (!acceptSingbox('mieru', file, data)) {
+            if (listeners.length === 0) {
+                report.logValidation('mieru', file.path, {
+                    warnings: [],
+                    errors: ['Mieru листенеры не найдены'],
+                });
+                report.recordSkipped();
                 return;
             }
 
-            const mihomoData = mihomo(data);
+            for (const listener of listeners) {
+                const listenerName = mieruParser.getListenerName(listener);
 
-            const serverName = protocolCtx.serverDisplayName();
+                if (!listenerName) {
+                    report.logValidation('mieru', file.path, {
+                        warnings: [],
+                        errors: ['Не заполнено поле name у листенера mieru'],
+                    });
+                    report.recordSkipped();
+                    continue;
+                }
 
-            platformPipeline.run(protocolCtx, {
-                singbox: { type: 'outbound', value: data.singBoxEntity },
-                mihomo: mihomoData,
-            }, file, plan({
-                tunExclude: data.parsed?.tunExclude || [],
-                mihomo: mihomoData,
-                raw: {
-                    outbound: {
-                        label: `[${protocolCtx.displayProtocol()}] outbound для кастомных конфигов hc-box или sing-box`,
+                if (!mieruParser.getListenerUserPassword(listener, ctx.user)) {
+                    continue;
+                }
+
+                const data = mieruParser.parseData(configData, mieruConfig.ip, ctx.user, listener);
+
+                if (!acceptSingbox('mieru', file, data)) {
+                    continue;
+                }
+
+                const protocolCtx = ctx
+                    .withProtocol('mieru')
+                    .withProfile(listenerName)
+                    .withDisplayNote(mieruParser.getTransportDisplayNote(data.parsed.transport));
+                const mihomoData = mihomo(data);
+                const serverName = protocolCtx.serverDisplayName();
+
+                platformPipeline.run(protocolCtx, {
+                    singbox: { type: 'outbound', value: data.singBoxEntity },
+                    mihomo: mihomoData,
+                }, file, plan({
+                    tunExclude: data.parsed?.tunExclude || [],
+                    mihomo: mihomoData,
+                    raw: {
+                        outbound: {
+                            label: `[${protocolCtx.displayProtocol()}] outbound для кастомных конфигов hc-box или sing-box`,
+                        },
                     },
-                },
-                android: true,
-                androidClash: true,
-                iosMihomo: true,
-                windows: {
-                    throneLink: {
-                        link: mieruParser.buildMieruLink(
-                            data.parsed,
-                            `${serverName} [${protocolCtx.displayProtocol()}]`
-                        ),
+                    android: true,
+                    androidClash: true,
+                    iosMihomo: true,
+                    windows: {
+                        throneLink: {
+                            link: mieruParser.buildMieruLink(
+                                data.parsed,
+                                `${serverName} [${protocolCtx.displayProtocol()}]`
+                            ),
+                        },
                     },
-                },
-                windowsClash: true,
-            }));
+                    windowsClash: true,
+                }));
+            }
         },
     },
 
