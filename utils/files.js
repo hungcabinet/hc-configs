@@ -66,8 +66,8 @@ function collectPerUserDirectory(configData, srvName, userName) {
     };
 }
 
-function collectServerSharedFile(configData, srvName, handler, entry) {
-    const fileEntry = toFileEntry(entry, entry.path);
+function collectServerSharedFile(configData, srvName, handler, entry, basePath) {
+    const fileEntry = toFileEntry(entry, basePath);
     const users = handler.extractUsers(fileEntry.path);
     const results = [];
 
@@ -111,7 +111,7 @@ function getUserFiles(configData) {
             const handler = protocolRegistry.findHandler(entity.name);
 
             if (handler?.layout === 'server-shared' && handler.extractUsers) {
-                for (const data of collectServerSharedFile(configData, srvName, handler, entity)) {
+                for (const data of collectServerSharedFile(configData, srvName, handler, entity, srvPath)) {
                     pushUserFilesResult(result, data);
                 }
             }
